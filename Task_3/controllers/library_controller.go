@@ -12,11 +12,11 @@ import (
 )
 
 type LibraryController struct {
-	library services.LibraryManager
+	service services.LibraryManager
 }
 
-func NewLibraryController(library services.LibraryManager) *LibraryController {
-	return &LibraryController{library: library}
+func NewLibraryController(service services.LibraryManager) *LibraryController {
+	return &LibraryController{service: service}
 }
 
 func (lc *LibraryController) Run() {
@@ -124,7 +124,7 @@ func (lc *LibraryController) addBook(reader *bufio.Reader) {
 		Status: "Available",
 	}
 
-	err = lc.library.AddBook(book)
+	err = lc.service.AddBook(book)
 	if err != nil {
 		fmt.Println("Error:", err)
 	} else {
@@ -152,7 +152,7 @@ func (lc *LibraryController) removeBook(reader *bufio.Reader) {
 		}
 	}
 
-	err = lc.library.RemoveBook(id)
+	err = lc.service.RemoveBook(id)
 	if err != nil {
 		fmt.Println("Error:", err)
 	} else {
@@ -199,7 +199,7 @@ func (lc *LibraryController) addMember(reader *bufio.Reader) {
 		Name: name,
 	}
 
-	err = lc.library.AddMember(member)
+	err = lc.service.AddMember(member)
 	if err != nil {
 		fmt.Println("Error:", err)
 	} else {
@@ -227,7 +227,7 @@ func (lc *LibraryController) removeMember(reader *bufio.Reader) {
 		}
 	}
 
-	err = lc.library.RemoveMember(id)
+	err = lc.service.RemoveMember(id)
 	if err != nil {
 		fmt.Println("Error:", err)
 	} else {
@@ -273,7 +273,7 @@ func (lc *LibraryController) borrowBook(reader *bufio.Reader) {
 		}
 	}
 
-	err = lc.library.BorrowBook(bookID, memberID)
+	err = lc.service.BorrowBook(bookID, memberID)
 	if err != nil {
 		fmt.Println("Error:", err)
 	} else {
@@ -319,7 +319,7 @@ func (lc *LibraryController) returnBook(reader *bufio.Reader) {
 		}
 	}
 
-	err = lc.library.ReturnBook(bookID, memberID)
+	err = lc.service.ReturnBook(bookID, memberID)
 	if err != nil {
 		fmt.Println("Error:", err)
 	} else {
@@ -328,7 +328,7 @@ func (lc *LibraryController) returnBook(reader *bufio.Reader) {
 }
 
 func (lc *LibraryController) listAvailableBooks() {
-	books := lc.library.ListAvailableBooks()
+	books := lc.service.ListAvailableBooks()
 	services.ClearScreen()
 	if len(books) == 0 {
 		fmt.Println("No books available.")
@@ -364,7 +364,7 @@ func (lc *LibraryController) listBorrowedBooks(reader *bufio.Reader) {
 	}
 
 	var books []models.Book
-	books, err = lc.library.ListBorrowedBooks(memberID)
+	books, err = lc.service.ListBorrowedBooks(memberID)
 	if err != nil {
 		fmt.Println("Error:", err)
 		return

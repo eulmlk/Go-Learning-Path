@@ -16,19 +16,19 @@ type LibraryManager interface {
 	ListBorrowedBooks(memberID int) ([]models.Book, error)
 }
 
-type Library struct {
+type LibraryService struct {
 	books   map[int]models.Book
 	members map[int]models.Member
 }
 
-func NewLibrary() *Library {
-	return &Library{
+func NewLibrary() *LibraryService {
+	return &LibraryService{
 		books:   make(map[int]models.Book),
 		members: make(map[int]models.Member),
 	}
 }
 
-func (l *Library) AddBook(book models.Book) error {
+func (l *LibraryService) AddBook(book models.Book) error {
 	_, bookExists := l.books[book.ID]
 	if bookExists {
 		return errors.New("a book with the given id already exists")
@@ -38,7 +38,7 @@ func (l *Library) AddBook(book models.Book) error {
 	return nil
 }
 
-func (l *Library) RemoveBook(bookID int) error {
+func (l *LibraryService) RemoveBook(bookID int) error {
 	_, bookExists := l.books[bookID]
 	if !bookExists {
 		return errors.New("book not found")
@@ -48,7 +48,7 @@ func (l *Library) RemoveBook(bookID int) error {
 	return nil
 }
 
-func (l *Library) AddMember(member models.Member) error {
+func (l *LibraryService) AddMember(member models.Member) error {
 	_, memberExists := l.members[member.ID]
 	if memberExists {
 		return errors.New("a member with the given id already exists")
@@ -58,7 +58,7 @@ func (l *Library) AddMember(member models.Member) error {
 	return nil
 }
 
-func (l *Library) RemoveMember(memberID int) error {
+func (l *LibraryService) RemoveMember(memberID int) error {
 	_, memberExists := l.members[memberID]
 	if !memberExists {
 		return errors.New("member not found")
@@ -68,7 +68,7 @@ func (l *Library) RemoveMember(memberID int) error {
 	return nil
 }
 
-func (l *Library) BorrowBook(bookID int, memberID int) error {
+func (l *LibraryService) BorrowBook(bookID int, memberID int) error {
 	book, bookExists := l.books[bookID]
 	if !bookExists {
 		return errors.New("book not found")
@@ -92,7 +92,7 @@ func (l *Library) BorrowBook(bookID int, memberID int) error {
 	return nil
 }
 
-func (l *Library) ReturnBook(bookID int, memberID int) error {
+func (l *LibraryService) ReturnBook(bookID int, memberID int) error {
 	member, memberExists := l.members[memberID]
 	if !memberExists {
 		return errors.New("member not found")
@@ -122,7 +122,7 @@ func (l *Library) ReturnBook(bookID int, memberID int) error {
 	return nil
 }
 
-func (l *Library) ListAvailableBooks() []models.Book {
+func (l *LibraryService) ListAvailableBooks() []models.Book {
 	availableBooks := []models.Book{}
 	for _, book := range l.books {
 		if book.Status == "Available" {
@@ -132,7 +132,7 @@ func (l *Library) ListAvailableBooks() []models.Book {
 	return availableBooks
 }
 
-func (l *Library) ListBorrowedBooks(memberID int) ([]models.Book, error) {
+func (l *LibraryService) ListBorrowedBooks(memberID int) ([]models.Book, error) {
 	member, memberExists := l.members[memberID]
 	if !memberExists {
 		return nil, errors.New("member not found")
