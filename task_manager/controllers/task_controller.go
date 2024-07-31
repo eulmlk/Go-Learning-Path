@@ -75,6 +75,11 @@ func (tc *TaskController) CreateTask(ctx *gin.Context) {
 	// If the status field is missing, set it to "Pending" by default.
 	if newTask.Status == "" {
 		newTask.Status = "Pending"
+
+		// If the status field is present, check if it is one of the allowed values.
+	} else if newTask.Status != "Pending" && newTask.Status != "Completed" && newTask.Status != "In Progress" {
+		ctx.JSON(400, gin.H{"error": "status field must be one of: Pending, Completed, In Progress"})
+		return
 	}
 
 	// Generate a new ID for the task.
@@ -117,6 +122,9 @@ func (tc *TaskController) UpdateTaskPut(ctx *gin.Context) {
 
 	if newTask.Status == "" {
 		ctx.JSON(400, gin.H{"error": "status field is required"})
+		return
+	} else if newTask.Status != "Pending" && newTask.Status != "Completed" && newTask.Status != "In Progress" {
+		ctx.JSON(400, gin.H{"error": "status field must be one of: Pending, Completed, In Progress"})
 		return
 	}
 
