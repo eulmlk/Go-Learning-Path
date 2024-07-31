@@ -91,5 +91,5 @@ func main() {
 		ctx.JSON(http.StatusCreated, gin.H{"message": "Task created"})
 	})
 
-	defer router.Run()
+	router.Run()
 }
