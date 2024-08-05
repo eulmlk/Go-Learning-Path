@@ -10,16 +10,16 @@ import (
 )
 
 // AuthMiddleware is a middleware that checks if the request is authorized
-func AuthMiddleware(role string) gin.HandlerFunc {
-	return func(c *gin.Context) {
+func AuthMiddleware() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
 		// Get the token from the request header
-		authHeader := c.GetHeader("Authorization")
+		authHeader := ctx.GetHeader("Authorization")
 
 		// Verify that it is a Bearer Token
 		authWords := strings.Fields(authHeader)
 		if len(authWords) != 2 || authWords[0] != "Bearer" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
-			c.Abort()
+			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+			ctx.Abort()
 			return
 		}
 
@@ -28,8 +28,8 @@ func AuthMiddleware(role string) gin.HandlerFunc {
 
 		// If the token is empty, return an error
 		if tokenString == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
-			c.Abort()
+			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+			ctx.Abort()
 			return
 		}
 
@@ -51,26 +51,22 @@ func AuthMiddleware(role string) gin.HandlerFunc {
 
 		// If there's an error while parsing the token, return an error
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
-			c.Abort()
+			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+			ctx.Abort()
 			return
 		}
 
 		// Extract claims and validate the token
 		claims, ok := token.Claims.(jwt.MapClaims)
 		if !ok || !token.Valid {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
-			c.Abort()
+			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+			ctx.Abort()
 			return
 		}
 
-		// You can add role-based authorization check here
-		if role != "" && claims["role"] != role {
-			c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden"})
-			c.Abort()
-			return
-		}
+		ctx.Set("user_role", claims["role"])
+		ctx.Set("user_id", claims["id"])
 
-		c.Next()
+		ctx.Next()
 	}
 }

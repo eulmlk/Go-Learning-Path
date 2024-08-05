@@ -21,53 +21,47 @@ func InitializeRouter(client *mongo.Client) *gin.Engine {
 	userController := controllers.NewUserController(userService)
 
 	// Public routes
+	// A route to register a new user
 	router.POST("/register", userController.RegisterUser)
+
+	// A route to login
 	router.POST("/login", userController.Login)
 
 	// Protected routes - User
-	userRoutes := router.Group("/user")
-	userRoutes.Use(middleware.AuthMiddleware("user")) // Apply user authentication middleware
+	router.Use(middleware.AuthMiddleware()) // Apply user authentication middleware
 	{
 		// A route to get all the tasks (user)
-		userRoutes.GET("/tasks", taskController.GetTasks)
+		router.GET("/tasks", taskController.GetTasks)
 
 		// A route to get a task by ID
-		userRoutes.GET("/tasks/:id", taskController.GetTaskByID)
+		router.GET("/tasks/:id", taskController.GetTaskByID)
 
 		// A route to create a new task
-		userRoutes.POST("/tasks", taskController.CreateTask)
+		router.POST("/tasks", taskController.CreateTask)
 
 		// A route to update a task by ID
-		userRoutes.PUT("/tasks/:id", taskController.UpdateTaskPut)
+		router.PUT("/tasks/:id", taskController.UpdateTaskPut)
 
 		// A route to update a task by ID
-		userRoutes.PATCH("/tasks/:id", taskController.UpdateTaskPatch)
+		router.PATCH("/tasks/:id", taskController.UpdateTaskPatch)
 
 		// A route to delete a task by ID
-		userRoutes.DELETE("/tasks/:id", taskController.DeleteTask)
-	}
+		router.DELETE("/tasks/:id", taskController.DeleteTask)
 
-	// Protected routes - Admin
-	adminRoutes := router.Group("/admin")
-	adminRoutes.Use(middleware.AuthMiddleware("admin")) // Apply admin authentication middleware
-	{
-		// A route to get all the tasks (user)
-		adminRoutes.GET("/tasks", taskController.GetTasks)
+		// A route to add a new user
+		router.POST("/users", userController.AddUser)
 
-		// A route to get a task by ID
-		adminRoutes.GET("/tasks/:id", taskController.GetTaskByID)
+		// A route to get all the users
+		router.GET("/users", userController.GetUsers)
 
-		// A route to create a new task
-		adminRoutes.POST("/tasks", taskController.CreateTask)
+		// A route to get a user by ID
+		router.GET("/users/:id", userController.GetUserByID)
 
-		// A route to update a task by ID
-		adminRoutes.PUT("/tasks/:id", taskController.UpdateTaskPut)
+		// A route to update a user by ID
+		router.PATCH("/users/:id", userController.UpdateUserPatch)
 
-		// A route to update a task by ID
-		adminRoutes.PATCH("/tasks/:id", taskController.UpdateTaskPatch)
-
-		// A route to delete a task by ID
-		adminRoutes.DELETE("/tasks/:id", taskController.DeleteTask)
+		// A route to delete a user by ID
+		router.DELETE("/users/:id", userController.DeleteUser)
 	}
 
 	return router

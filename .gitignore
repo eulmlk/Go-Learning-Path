@@ -2,7 +2,7 @@
 *.exe
 
 # Air for hot reloading
-air.toml
+.air.toml
 tmp/
 
 # Ignore Logs

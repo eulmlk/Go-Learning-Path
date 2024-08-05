@@ -23,10 +23,10 @@ func NewTaskController(service *data.TaskService) *TaskController {
 
 // GetTasks is a handler function that returns all tasks.
 func (tc *TaskController) GetTasks(ctx *gin.Context) {
-	tasks, err := tc.service.GetTasks()
-	if err != nil {
-		log.Println(err.Err)
-		ctx.JSON(err.StatusCode, gin.H{"error": err.Message})
+	tasks, _err := tc.service.GetTasks()
+	if _err != nil {
+		log.Println(_err.Err)
+		ctx.JSON(_err.StatusCode, gin.H{"error": _err.Message})
 		return
 	}
 
@@ -38,11 +38,26 @@ func (tc *TaskController) GetTasks(ctx *gin.Context) {
 
 // GetTaskByID is a handler function that returns a task by ID.
 func (tc *TaskController) GetTaskByID(ctx *gin.Context) {
-	taskID := ctx.Param("id")
-	task, err := tc.service.GetTaskByID(taskID)
+	role := ctx.GetString("user_role")
+	userID, ok := ctx.Get("user_id")
+	if !ok {
+		log.Println("user_id not found")
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		return
+	}
+
+	objectID, err := primitive.ObjectIDFromHex(userID.(string))
 	if err != nil {
-		log.Println(err.Err)
-		ctx.JSON(err.StatusCode, gin.H{"error": err.Message})
+		log.Println("Invalid user_id:", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		return
+	}
+
+	taskID := ctx.Param("id")
+	task, _err := tc.service.GetTaskByID(taskID, role, objectID)
+	if _err != nil {
+		log.Println(_err.Err)
+		ctx.JSON(_err.StatusCode, gin.H{"error": _err.Message})
 		return
 	}
 
@@ -58,13 +73,7 @@ func (tc *TaskController) CreateTask(ctx *gin.Context) {
 
 	// If there is an error binding the request body, return a 400 response.
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid request!"})
-		return
-	}
-
-	// If the ID field is present in the request body, return a 400 response.
-	if newTask.ID != primitive.NilObjectID {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "id field is not allowed"})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request!"})
 		return
 	}
 
@@ -91,6 +100,21 @@ func (tc *TaskController) CreateTask(ctx *gin.Context) {
 
 	// Generate a new ObjectID for the task.
 	newTask.ID = primitive.NewObjectID()
+	userID, ok := ctx.Get("user_id")
+	if !ok {
+		log.Println("user_id not found")
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		return
+	}
+
+	objectID, err := primitive.ObjectIDFromHex(userID.(string))
+	if err != nil {
+		log.Println("Invalid user_id:", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		return
+	}
+
+	newTask.UserID = objectID
 
 	// Create the task using the TaskService.
 	_err := tc.service.CreateTask(&newTask)
@@ -105,10 +129,26 @@ func (tc *TaskController) CreateTask(ctx *gin.Context) {
 }
 
 func (tc *TaskController) UpdateTaskPut(ctx *gin.Context) {
+	role := ctx.GetString("user_role")
+
+	userID, ok := ctx.Get("user_id")
+	if !ok {
+		log.Println("user_id not found")
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		return
+	}
+
+	objectID, err := primitive.ObjectIDFromHex(userID.(string))
+	if err != nil {
+		log.Println("Invalid user_id:", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		return
+	}
+
 	newTask := models.Task{}
 
 	// Bind the request body to the newTask struct.
-	err := ctx.BindJSON(&newTask)
+	err = ctx.BindJSON(&newTask)
 
 	// If there is an error binding the request body, return a 400 response.
 	if err != nil {
@@ -148,7 +188,7 @@ func (tc *TaskController) UpdateTaskPut(ctx *gin.Context) {
 
 	// Update the task using the TaskService.
 	taskID := ctx.Param("id")
-	task, _err := tc.service.ReplaceTask(taskID, &newTask)
+	task, _err := tc.service.ReplaceTask(taskID, &newTask, objectID, role)
 	if _err != nil {
 		log.Println(_err.Err)
 		ctx.JSON(_err.StatusCode, gin.H{"error": _err.Message})
@@ -164,10 +204,25 @@ func (tc *TaskController) UpdateTaskPut(ctx *gin.Context) {
 }
 
 func (tc *TaskController) UpdateTaskPatch(ctx *gin.Context) {
+	role := ctx.GetString("user_role")
+	userID, ok := ctx.Get("user_id")
+	if !ok {
+		log.Println("user_id not found")
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		return
+	}
+
+	objectID, err := primitive.ObjectIDFromHex(userID.(string))
+	if err != nil {
+		log.Println("Invalid user_id:", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		return
+	}
+
 	newTask := models.Task{}
 
 	// Bind the request body to the newTask struct.
-	err := ctx.BindJSON(&newTask)
+	err = ctx.BindJSON(&newTask)
 
 	// If there is an error binding the request body, return a 400 response.
 	if err != nil {
@@ -175,9 +230,14 @@ func (tc *TaskController) UpdateTaskPatch(ctx *gin.Context) {
 		return
 	}
 
+	if newTask.Status != "" && newTask.Status != "Pending" && newTask.Status != "Completed" && newTask.Status != "In Progress" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "status field must be one of: Pending, Completed, In Progress"})
+		return
+	}
+
 	// Update the task using the TaskService.
 	taskID := ctx.Param("id")
-	task, _err := tc.service.UpdateTask(taskID, &newTask)
+	task, _err := tc.service.UpdateTask(taskID, &newTask, objectID, role)
 	if _err != nil {
 		log.Println(_err.Err)
 		ctx.JSON(_err.StatusCode, gin.H{"error": _err.Message})
@@ -194,14 +254,30 @@ func (tc *TaskController) UpdateTaskPatch(ctx *gin.Context) {
 }
 
 func (tc *TaskController) DeleteTask(ctx *gin.Context) {
+	// Get the user role and ID from the context.
+	role := ctx.GetString("user_role")
+	userID, ok := ctx.Get("user_id")
+	if !ok {
+		log.Println("user_id not found")
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		return
+	}
+
+	objectID, err := primitive.ObjectIDFromHex(userID.(string))
+	if err != nil {
+		log.Println("Invalid user_id:", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		return
+	}
+
 	taskID := ctx.Param("id")
 
 	// Delete the task using the TaskService.
-	err := tc.service.DeleteTask(taskID)
+	_err := tc.service.DeleteTask(taskID, role, objectID)
 
 	// If the task is not found, return a 404 response.
-	if err != nil {
-		ctx.JSON(err.StatusCode, gin.H{"error": err.Message})
+	if _err != nil {
+		ctx.JSON(_err.StatusCode, gin.H{"error": _err.Message})
 		return
 	}
 
