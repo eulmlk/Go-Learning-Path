@@ -7,13 +7,14 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"task_manager/api/router"
 	"task_manager/database"
-	"task_manager/router"
 	"time"
 
 	"github.com/joho/godotenv"
 )
 
+// The main function initializes the server and starts it.
 func main() {
 	log.Println("Starting server...")
 
