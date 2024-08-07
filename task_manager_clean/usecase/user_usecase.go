@@ -9,6 +9,7 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -31,34 +32,7 @@ func NewUserUsecase(userRepo repository.UserRepository) *UserUsecase {
 
 // A method that adds a new user.
 func (u *UserUsecase) AddUser(userData *domain.CreateUserData, claims *domain.Claims) (*domain.User, *domain.Error) {
-	// Check if the user has the correct role.
-	if claims.Role != "admin" {
-		return nil, &domain.Error{
-			Err:        errors.New("unauthorized"),
-			StatusCode: http.StatusUnauthorized,
-			Message:    "Only admin can add a new user",
-		}
-	}
-
-	// Check if the user is trying to add a root user.
-	if userData.Role == "root" {
-		return nil, &domain.Error{
-			Err:        errors.New("forbidden"),
-			StatusCode: http.StatusForbidden,
-			Message:    "Cannot add root user",
-		}
-	}
-
-	// Check if the user is trying to add an admin user.
-	if claims.Role != "root" && userData.Role == "admin" {
-		return nil, &domain.Error{
-			Err:        errors.New("unauthorized"),
-			StatusCode: http.StatusForbidden,
-			Message:    "Only root user can add admin user",
-		}
-	}
-
-	// Create a new user.
+	// Create a new user object.
 	user := &domain.User{
 		ID:       primitive.NewObjectID(),
 		Username: userData.Username,
@@ -66,19 +40,20 @@ func (u *UserUsecase) AddUser(userData *domain.CreateUserData, claims *domain.Cl
 		Role:     userData.Role,
 	}
 
-	// Hash the user's password.
-	var err error
-	user.Password, err = hashPassword(user.Password)
-	if err != nil {
-		return nil, &domain.Error{
-			Err:        err,
-			StatusCode: http.StatusInternalServerError,
-			Message:    "Internal server error",
-		}
+	// Check if the user has the correct role.
+	_err := canManipulateUser(claims, user, "add")
+	if _err != nil {
+		return nil, _err
+	}
+
+	// Check if the username is already taken and hash the password.
+	_err = u.validate(user)
+	if _err != nil {
+		return nil, _err
 	}
 
 	// Add the user to the database.
-	err = u.userRepo.AddUser(user)
+	err := u.userRepo.AddUser(user)
 	if err != nil {
 		return nil, &domain.Error{
 			Err:        err,
@@ -100,28 +75,14 @@ func (u *UserUsecase) RegisterUser(userData *domain.AuthUserData) (*domain.User,
 		Role:     "user",
 	}
 
-	// Check if the username already exists.
-	_, err := u.userRepo.GetUserByUsername(user.Username)
-	if err == nil {
-		return nil, &domain.Error{
-			Err:        errors.New("conflict"),
-			StatusCode: http.StatusConflict,
-			Message:    "Username already exists",
-		}
-	}
-
-	// Hash the user's password.
-	user.Password, err = hashPassword(user.Password)
-	if err != nil {
-		return nil, &domain.Error{
-			Err:        err,
-			StatusCode: http.StatusInternalServerError,
-			Message:    "Internal server error",
-		}
+	// Check if the user name is already taken and hash the password.
+	_err := u.validate(user)
+	if _err != nil {
+		return nil, _err
 	}
 
 	// Add the user to the database.
-	err = u.userRepo.AddUser(user)
+	err := u.userRepo.AddUser(user)
 	if err != nil {
 		return nil, &domain.Error{
 			Err:        err,
@@ -188,10 +149,18 @@ func (u *UserUsecase) GetUserByID(objectID primitive.ObjectID) (*domain.User, *d
 	// Get the user from the database.
 	user, err := u.userRepo.GetUserByID(objectID)
 	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, &domain.Error{
+				Err:        err,
+				StatusCode: http.StatusNotFound,
+				Message:    "User not found",
+			}
+		}
+
 		return nil, &domain.Error{
 			Err:        err,
-			StatusCode: http.StatusNotFound,
-			Message:    "User not found",
+			StatusCode: http.StatusInternalServerError,
+			Message:    "Internal server error",
 		}
 	}
 
@@ -200,15 +169,6 @@ func (u *UserUsecase) GetUserByID(objectID primitive.ObjectID) (*domain.User, *d
 
 // A method that updates a user by ID.
 func (u *UserUsecase) UpdateUser(objectID primitive.ObjectID, userData *domain.UpdateUserData, claims *domain.Claims) (*domain.User, *domain.Error) {
-	// Check if the user has the correct role.
-	if claims.Role != "admin" {
-		return nil, &domain.Error{
-			Err:        errors.New("unauthorized"),
-			StatusCode: http.StatusUnauthorized,
-			Message:    "Only admin can update a user",
-		}
-	}
-
 	// Get the user from the database.
 	user, err := u.userRepo.GetUserByID(objectID)
 	if err != nil {
@@ -219,46 +179,16 @@ func (u *UserUsecase) UpdateUser(objectID primitive.ObjectID, userData *domain.U
 		}
 	}
 
-	// Check if the user is trying to update a root user.
-	if user.Role == "root" {
-		return nil, &domain.Error{
-			Err:        errors.New("forbidden"),
-			StatusCode: http.StatusForbidden,
-			Message:    "Cannot update root user",
-		}
+	// Check if the user has the correct role.
+	_err := canManipulateUser(claims, user, "update")
+	if _err != nil {
+		return nil, _err
 	}
 
-	// Check if the user is trying to update an admin user.
-	if claims.Role != "root" && user.Role == "admin" {
-		return nil, &domain.Error{
-			Err:        errors.New("unauthorized"),
-			StatusCode: http.StatusForbidden,
-			Message:    "Only root user can update admin user",
-		}
-	}
-
-	// Check if the username already exists.
-	if userData.Username != "" {
-		_, err := u.userRepo.GetUserByUsername(userData.Username)
-		if err == nil {
-			return nil, &domain.Error{
-				Err:        errors.New("conflict"),
-				StatusCode: http.StatusConflict,
-				Message:    "Username already exists",
-			}
-		}
-	}
-
-	// Hash the user's password.
-	if userData.Password != "" {
-		userData.Password, err = hashPassword(userData.Password)
-		if err != nil {
-			return nil, &domain.Error{
-				Err:        err,
-				StatusCode: http.StatusInternalServerError,
-				Message:    "Internal server error",
-			}
-		}
+	// Check if the username is already taken and hash the password.
+	_err = u.validate(&domain.User{Username: userData.Username, Password: userData.Password})
+	if _err != nil {
+		return nil, _err
 	}
 
 	// Create a map to store the updated data.
@@ -270,6 +200,14 @@ func (u *UserUsecase) UpdateUser(objectID primitive.ObjectID, userData *domain.U
 		updateData["password"] = userData.Password
 	}
 	if userData.Role != "" {
+		if userData.Role != "user" && claims.Role != "root" {
+			return nil, &domain.Error{
+				Err:        errors.New("forbidden"),
+				StatusCode: http.StatusForbidden,
+				Message:    "Only root user can update role",
+			}
+		}
+
 		updateData["role"] = userData.Role
 	}
 
@@ -288,15 +226,6 @@ func (u *UserUsecase) UpdateUser(objectID primitive.ObjectID, userData *domain.U
 
 // A method that deletes a user by ID.
 func (u *UserUsecase) DeleteUser(objectID primitive.ObjectID, claims *domain.Claims) *domain.Error {
-	// Check if the user has the correct role.
-	if claims.Role != "admin" {
-		return &domain.Error{
-			Err:        errors.New("unauthorized"),
-			StatusCode: http.StatusUnauthorized,
-			Message:    "Only admin can delete a user",
-		}
-	}
-
 	// Get the user from the database.
 	user, err := u.userRepo.GetUserByID(objectID)
 	if err != nil {
@@ -307,22 +236,10 @@ func (u *UserUsecase) DeleteUser(objectID primitive.ObjectID, claims *domain.Cla
 		}
 	}
 
-	// Check if the user is trying to delete a root user.
-	if user.Role == "root" {
-		return &domain.Error{
-			Err:        errors.New("forbidden"),
-			StatusCode: http.StatusForbidden,
-			Message:    "Cannot delete root user",
-		}
-	}
-
-	// Check if the user is trying to delete an admin user.
-	if claims.Role != "root" && user.Role == "admin" {
-		return &domain.Error{
-			Err:        errors.New("unauthorized"),
-			StatusCode: http.StatusForbidden,
-			Message:    "Only root user can delete admin user",
-		}
+	// Check if the user has the correct role.
+	_err := canManipulateUser(claims, user, "delete")
+	if _err != nil {
+		return _err
 	}
 
 	// Delete the user from the database.
@@ -332,6 +249,81 @@ func (u *UserUsecase) DeleteUser(objectID primitive.ObjectID, claims *domain.Cla
 			Err:        err,
 			StatusCode: http.StatusInternalServerError,
 			Message:    "Internal server error",
+		}
+	}
+
+	return nil
+}
+
+// A function that checks if a the logged in user can manipulate the target user.
+func canManipulateUser(claims *domain.Claims, user *domain.User, manip string) *domain.Error {
+	// If the user is a regular user, they can only manipulate their own account.
+	if claims.Role == "user" {
+		if user.ID != claims.ID {
+			var message string
+			if manip == "add" {
+				message = "A User cannot add a new user"
+			} else {
+				message = "A User cannot " + manip + " another user"
+			}
+
+			return &domain.Error{
+				Err:        errors.New("unauthorized"),
+				StatusCode: http.StatusForbidden,
+				Message:    message,
+			}
+		}
+
+		return nil
+	}
+
+	// If the user is an admin, they can manipulate all users except root user and other admin users.
+	if claims.Role == "admin" {
+		if user.Role == "root" {
+			return &domain.Error{
+				Err:        errors.New("forbidden"),
+				StatusCode: http.StatusForbidden,
+				Message:    "Cannot " + manip + " root user",
+			}
+		}
+
+		if user.Role == "admin" && claims.ID != user.ID {
+			return &domain.Error{
+				Err:        errors.New("unauthorized"),
+				StatusCode: http.StatusForbidden,
+				Message:    "Admin cannot " + manip + " another admin user",
+			}
+		}
+	}
+
+	// If the user is a root user, they can manipulate all users.
+	return nil
+}
+
+// A helper method that checks if a username is already taken and hashes the password.
+func (u *UserUsecase) validate(user *domain.User) *domain.Error {
+	// Check if the username is already taken.
+	if user.Username != "" {
+		_, err := u.userRepo.GetUserByUsername(user.Username)
+		if err == nil {
+			return &domain.Error{
+				Err:        errors.New("conflict"),
+				StatusCode: http.StatusConflict,
+				Message:    "Username already exists",
+			}
+		}
+	}
+
+	// Hash the user's password.
+	if user.Password != "" {
+		var err error
+		user.Password, err = hashPassword(user.Password)
+		if err != nil {
+			return &domain.Error{
+				Err:        err,
+				StatusCode: http.StatusInternalServerError,
+				Message:    "Internal server error",
+			}
 		}
 	}
 

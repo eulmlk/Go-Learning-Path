@@ -52,7 +52,7 @@ func (r *MongoUserRepository) GetUserByID(id primitive.ObjectID) (*domain.User, 
 	user := &domain.User{}
 
 	// Query the database for a user with the given ID.
-	result := r.collection.FindOne(context.Background(), id)
+	result := r.collection.FindOne(context.Background(), bson.M{"_id": id})
 	if err := result.Decode(user); err != nil {
 		return nil, err
 	}
@@ -76,14 +76,14 @@ func (r *MongoUserRepository) GetUserByUsername(username string) (*domain.User, 
 // A method that updates a user with the given ID.
 func (r *MongoUserRepository) UpdateUser(id primitive.ObjectID, userData bson.M) (*domain.User, error) {
 	// Update the user in the database.
-	_, err := r.collection.UpdateOne(context.Background(), id, bson.M{"$set": userData})
+	_, err := r.collection.UpdateOne(context.Background(), bson.M{"_id": id}, userData)
 	if err != nil {
 		return nil, err
 	}
 
 	// Get the updated user from the database.
 	updatedUser := &domain.User{}
-	err = r.collection.FindOne(context.Background(), id).Decode(updatedUser)
+	err = r.collection.FindOne(context.Background(), bson.M{"_id": id}).Decode(updatedUser)
 	if err != nil {
 		return nil, err
 	}
@@ -94,6 +94,6 @@ func (r *MongoUserRepository) UpdateUser(id primitive.ObjectID, userData bson.M)
 // A method that deletes a user with the given ID.
 func (r *MongoUserRepository) DeleteUser(id primitive.ObjectID) error {
 	// Delete the user from the database.
-	_, err := r.collection.DeleteOne(context.Background(), id)
+	_, err := r.collection.DeleteOne(context.Background(), bson.M{"_id": id})
 	return err
 }
