@@ -4,7 +4,6 @@ import (
 	"errors"
 	"net/http"
 	"task_manager/domain"
-	"task_manager/repository"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -13,11 +12,11 @@ import (
 
 // A struct that defines the services for tasks.
 type TaskUsecase struct {
-	taskRepo repository.TaskRepository
+	taskRepo domain.TaskRepository
 }
 
 // A constructor that creates a new instance of TaskUsecase.
-func NewTaskUsecase(taskRepo repository.TaskRepository) *TaskUsecase {
+func NewTaskUsecase(taskRepo domain.TaskRepository) *TaskUsecase {
 	return &TaskUsecase{
 		taskRepo: taskRepo,
 	}

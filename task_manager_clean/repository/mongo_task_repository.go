@@ -33,11 +33,7 @@ func (r *MongoTaskRepository) GetAllTasks() ([]domain.Task, error) {
 
 	// Iterate over the cursor and decode each task into a Task struct.
 	err = cursor.All(context.Background(), &tasks)
-	if err != nil {
-		return nil, err
-	}
-
-	return tasks, nil
+	return tasks, err
 }
 
 // A method that returns a task with the given ID.
@@ -46,11 +42,8 @@ func (r *MongoTaskRepository) GetTaskByID(id primitive.ObjectID) (*domain.Task, 
 
 	// Query the database for a task with the given ID.
 	result := r.collection.FindOne(context.Background(), bson.M{"_id": id})
-	if err := result.Decode(task); err != nil {
-		return nil, err
-	}
-
-	return task, nil
+	err := result.Decode(task)
+	return task, err
 }
 
 // A method that adds a new task.
@@ -63,12 +56,11 @@ func (r *MongoTaskRepository) AddTask(task *domain.Task) error {
 // A method that replaces a task with the given ID, with the new task.
 func (r *MongoTaskRepository) ReplaceTask(id primitive.ObjectID, newTask *domain.Task) (*domain.Task, error) {
 	newTask.ID = id
-	result := r.collection.FindOneAndReplace(context.Background(), bson.M{"_id": id}, newTask)
-	if err := result.Decode(newTask); err != nil {
-		return nil, err
-	}
 
-	return newTask, nil
+	// Replace the task with the given ID.
+	result := r.collection.FindOneAndReplace(context.Background(), bson.M{"_id": id}, newTask)
+	err := result.Decode(newTask)
+	return newTask, err
 }
 
 // A method that updates a task with the given ID.

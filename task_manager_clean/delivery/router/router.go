@@ -1,9 +1,10 @@
 package router
 
 import (
-	"task_manager/api/controllers"
-	"task_manager/api/middleware"
+	"task_manager/database"
+	"task_manager/delivery/controllers"
 	"task_manager/domain"
+	"task_manager/infrastructure"
 	"task_manager/repository"
 	"task_manager/usecase"
 
@@ -22,10 +23,10 @@ func ProtectedTaskRoutes(router *gin.Engine, taskController *controllers.TaskCon
 	router.GET("/tasks", taskController.GetTasks)
 	router.POST("/tasks", taskController.CreateTask)
 
-	router.GET("/tasks/:id", middleware.IDMiddleware("task"), taskController.GetTaskByID)
-	router.PUT("/tasks/:id", middleware.IDMiddleware("task"), taskController.UpdateTaskPut)
-	router.PATCH("/tasks/:id", middleware.IDMiddleware("task"), taskController.UpdateTaskPatch)
-	router.DELETE("/tasks/:id", middleware.IDMiddleware("task"), taskController.DeleteTask)
+	router.GET("/tasks/:id", infrastructure.IDMiddleware("task"), taskController.GetTaskByID)
+	router.PUT("/tasks/:id", infrastructure.IDMiddleware("task"), taskController.UpdateTaskPut)
+	router.PATCH("/tasks/:id", infrastructure.IDMiddleware("task"), taskController.UpdateTaskPatch)
+	router.DELETE("/tasks/:id", infrastructure.IDMiddleware("task"), taskController.DeleteTask)
 }
 
 // Protected Routes related to users
@@ -33,9 +34,9 @@ func ProtectedUserRoutes(router *gin.Engine, userController *controllers.UserCon
 	router.POST("/users", userController.AddUser)
 	router.GET("/users", userController.GetUsers)
 
-	router.GET("/users/:id", middleware.IDMiddleware("user"), userController.GetUserByID)
-	router.PATCH("/users/:id", middleware.IDMiddleware("user"), userController.UpdateUserPatch)
-	router.DELETE("/users/:id", middleware.IDMiddleware("user"), userController.DeleteUser)
+	router.GET("/users/:id", infrastructure.IDMiddleware("user"), userController.GetUserByID)
+	router.PATCH("/users/:id", infrastructure.IDMiddleware("user"), userController.UpdateUserPatch)
+	router.DELETE("/users/:id", infrastructure.IDMiddleware("user"), userController.DeleteUser)
 }
 
 func GetTaskController(db *mongo.Database) *controllers.TaskController {
@@ -58,7 +59,7 @@ func InitializeRouter(client *mongo.Client) *gin.Engine {
 	router := gin.Default()
 
 	// Get the task and user controllers
-	db := client.Database("task_manager")
+	db := client.Database(database.DatabaseName)
 	taskController := GetTaskController(db)
 	userController := GetUserController(db)
 
@@ -66,7 +67,7 @@ func InitializeRouter(client *mongo.Client) *gin.Engine {
 	PublicRoutes(router, userController)
 
 	// Protected routes
-	router.Use(middleware.AuthMiddleware)
+	router.Use(infrastructure.AuthMiddleware)
 	{
 		ProtectedTaskRoutes(router, taskController)
 		ProtectedUserRoutes(router, userController)

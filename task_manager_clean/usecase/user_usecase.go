@@ -4,27 +4,20 @@ import (
 	"errors"
 	"net/http"
 	"task_manager/domain"
-	"task_manager/internal"
-	"task_manager/repository"
+	"task_manager/infrastructure"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
-	"golang.org/x/crypto/bcrypt"
 )
-
-func hashPassword(password string) (string, error) {
-	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	return string(bytes), err
-}
 
 // A struct that defines the services for users.
 type UserUsecase struct {
-	userRepo repository.UserRepository
+	userRepo domain.UserRepository
 }
 
 // A constructor that creates a new instance of UserUsecase.
-func NewUserUsecase(userRepo repository.UserRepository) *UserUsecase {
+func NewUserUsecase(userRepo domain.UserRepository) *UserUsecase {
 	return &UserUsecase{
 		userRepo: userRepo,
 	}
@@ -107,7 +100,7 @@ func (u *UserUsecase) LoginUser(userData *domain.AuthUserData) (string, *domain.
 	}
 
 	// Compare the user's password with the given password.
-	err = internal.ComparePasswords(user.Password, userData.Password)
+	err = infrastructure.ComparePasswords(user.Password, userData.Password)
 	if err != nil {
 		return "", &domain.Error{
 			Err:        err,
@@ -117,7 +110,7 @@ func (u *UserUsecase) LoginUser(userData *domain.AuthUserData) (string, *domain.
 	}
 
 	// Generate a JWT token for the user.
-	token, err := internal.GenerateToken(user)
+	token, err := infrastructure.GenerateToken(user)
 	if err != nil {
 		return "", &domain.Error{
 			Err:        err,
@@ -317,7 +310,7 @@ func (u *UserUsecase) validate(user *domain.User) *domain.Error {
 	// Hash the user's password.
 	if user.Password != "" {
 		var err error
-		user.Password, err = hashPassword(user.Password)
+		user.Password, err = infrastructure.HashPassword(user.Password)
 		if err != nil {
 			return &domain.Error{
 				Err:        err,

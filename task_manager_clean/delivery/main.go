@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"os/signal"
 	"syscall"
-	"task_manager/api/router"
 	"task_manager/database"
+	"task_manager/delivery/router"
 	"time"
 
 	"github.com/joho/godotenv"

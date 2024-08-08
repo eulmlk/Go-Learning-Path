@@ -13,6 +13,10 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+const (
+	DatabaseName = "task_manager"
+)
+
 // A function that initializes the MongoDB connection.
 func Init() (*mongo.Client, error) {
 	// Get mongo connection uri
@@ -54,7 +58,7 @@ func CreateRootUser(client *mongo.Client) error {
 	}
 
 	// Get the user collection
-	collection := client.Database("task_manager").Collection("users")
+	collection := client.Database(DatabaseName).Collection(domain.UserCollection)
 
 	// Check if the root user exists
 	var user map[string]interface{}
