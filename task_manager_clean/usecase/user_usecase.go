@@ -205,7 +205,7 @@ func (u *UserUsecase) UpdateUser(objectID primitive.ObjectID, userData *domain.U
 	}
 
 	// Update the user in the database.
-	user, err = u.userRepo.UpdateUser(objectID, bson.M{"$set": updateData})
+	err = u.userRepo.UpdateUser(objectID, bson.M{"$set": updateData})
 	if err != nil {
 		return nil, &domain.Error{
 			Err:        err,
@@ -214,7 +214,17 @@ func (u *UserUsecase) UpdateUser(objectID primitive.ObjectID, userData *domain.U
 		}
 	}
 
-	return user, nil
+	// Get the updated user from the database.
+	updatedUser, err := u.userRepo.GetUserByID(objectID)
+	if err != nil {
+		return nil, &domain.Error{
+			Err:        err,
+			StatusCode: http.StatusInternalServerError,
+			Message:    "Internal server error",
+		}
+	}
+
+	return updatedUser, nil
 }
 
 // A method that deletes a user by ID.

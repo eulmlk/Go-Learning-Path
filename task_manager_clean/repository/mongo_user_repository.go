@@ -40,11 +40,7 @@ func (r *MongoUserRepository) GetUsers() ([]domain.User, error) {
 
 	// Iterate over the cursor and decode each user into a User struct.
 	err = cursor.All(context.Background(), &users)
-	if err != nil {
-		return nil, err
-	}
-
-	return users, nil
+	return users, err
 }
 
 // A method that returns a user with the given id.
@@ -74,21 +70,10 @@ func (r *MongoUserRepository) GetUserByUsername(username string) (*domain.User, 
 }
 
 // A method that updates a user with the given ID.
-func (r *MongoUserRepository) UpdateUser(id primitive.ObjectID, userData bson.M) (*domain.User, error) {
+func (r *MongoUserRepository) UpdateUser(id primitive.ObjectID, userData bson.M) error {
 	// Update the user in the database.
-	_, err := r.collection.UpdateOne(context.Background(), bson.M{"_id": id}, userData)
-	if err != nil {
-		return nil, err
-	}
-
-	// Get the updated user from the database.
-	updatedUser := &domain.User{}
-	err = r.collection.FindOne(context.Background(), bson.M{"_id": id}).Decode(updatedUser)
-	if err != nil {
-		return nil, err
-	}
-
-	return updatedUser, nil
+	_, err := r.collection.UpdateOne(context.Background(), bson.M{"_id": id}, bson.M{"$set": userData})
+	return err
 }
 
 // A method that deletes a user with the given ID.

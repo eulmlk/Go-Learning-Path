@@ -122,7 +122,16 @@ func (tu *TaskUsecase) ReplaceTask(objectID primitive.ObjectID, taskData *domain
 	}
 
 	// Replace the task in the database.
-	newTask, err := tu.taskRepo.ReplaceTask(objectID, task)
+	err := tu.taskRepo.ReplaceTask(objectID, task)
+	if err != nil {
+		return nil, &domain.Error{
+			Err:        err,
+			StatusCode: http.StatusInternalServerError,
+			Message:    "Internal server error",
+		}
+	}
+
+	newTask, err := tu.taskRepo.GetTaskByID(objectID)
 	if err != nil {
 		return nil, &domain.Error{
 			Err:        err,
@@ -176,7 +185,16 @@ func (tu *TaskUsecase) UpdateTask(objectID primitive.ObjectID, taskData *domain.
 	}
 
 	// Update the task in the database.
-	task, err := tu.taskRepo.UpdateTask(objectID, updateData)
+	err := tu.taskRepo.UpdateTask(objectID, updateData)
+	if err != nil {
+		return nil, &domain.Error{
+			Err:        err,
+			StatusCode: http.StatusInternalServerError,
+			Message:    "Internal server error",
+		}
+	}
+
+	task, err := tu.taskRepo.GetTaskByID(objectID)
 	if err != nil {
 		return nil, &domain.Error{
 			Err:        err,

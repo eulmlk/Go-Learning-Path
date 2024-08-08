@@ -59,7 +59,7 @@ type TaskRepository interface {
 	GetAllTasks() ([]Task, error)
 	GetTaskByID(id primitive.ObjectID) (*Task, error)
 	AddTask(task *Task) error
-	ReplaceTask(id primitive.ObjectID, taskData *Task) (*Task, error)
-	UpdateTask(id primitive.ObjectID, taskData bson.M) (*Task, error)
+	ReplaceTask(id primitive.ObjectID, taskData *Task) error
+	UpdateTask(id primitive.ObjectID, taskData bson.M) error
 	DeleteTask(id primitive.ObjectID) error
 }

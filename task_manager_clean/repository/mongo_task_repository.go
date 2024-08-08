@@ -54,27 +54,17 @@ func (r *MongoTaskRepository) AddTask(task *domain.Task) error {
 }
 
 // A method that replaces a task with the given ID, with the new task.
-func (r *MongoTaskRepository) ReplaceTask(id primitive.ObjectID, newTask *domain.Task) (*domain.Task, error) {
-	newTask.ID = id
-
+func (r *MongoTaskRepository) ReplaceTask(id primitive.ObjectID, newTask *domain.Task) error {
 	// Replace the task with the given ID.
 	result := r.collection.FindOneAndReplace(context.Background(), bson.M{"_id": id}, newTask)
-	err := result.Decode(newTask)
-	return newTask, err
+	return result.Err()
 }
 
 // A method that updates a task with the given ID.
-func (r *MongoTaskRepository) UpdateTask(id primitive.ObjectID, taskData bson.M) (*domain.Task, error) {
+func (r *MongoTaskRepository) UpdateTask(id primitive.ObjectID, taskData bson.M) error {
 	// Update the task with the given ID.
 	_, err := r.collection.UpdateOne(context.Background(), bson.M{"_id": id}, bson.M{"$set": taskData})
-	if err != nil {
-		return nil, err
-	}
-
-	// Return the updated task.
-	updatedTask := &domain.Task{}
-	err = r.collection.FindOne(context.Background(), bson.M{"_id": id}).Decode(updatedTask)
-	return updatedTask, err
+	return err
 }
 
 // A method that deletes a task with the given ID.

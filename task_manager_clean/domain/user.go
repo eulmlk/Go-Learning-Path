@@ -43,6 +43,6 @@ type UserRepository interface {
 	GetUsers() ([]User, error)
 	GetUserByID(objectID primitive.ObjectID) (*User, error)
 	GetUserByUsername(username string) (*User, error)
-	UpdateUser(objectID primitive.ObjectID, userData bson.M) (*User, error)
+	UpdateUser(objectID primitive.ObjectID, userData bson.M) error
 	DeleteUser(objectID primitive.ObjectID) error
 }
