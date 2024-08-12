@@ -99,38 +99,6 @@ func (_m *UserUsecase) GetUserByID(objectID primitive.ObjectID) (*domain.User, *
 	return r0, r1
 }
 
-// GetUserByUsername provides a mock function with given fields: username
-func (_m *UserUsecase) GetUserByUsername(username string) (*domain.User, *domain.Error) {
-	ret := _m.Called(username)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetUserByUsername")
-	}
-
-	var r0 *domain.User
-	var r1 *domain.Error
-	if rf, ok := ret.Get(0).(func(string) (*domain.User, *domain.Error)); ok {
-		return rf(username)
-	}
-	if rf, ok := ret.Get(0).(func(string) *domain.User); ok {
-		r0 = rf(username)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*domain.User)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(string) *domain.Error); ok {
-		r1 = rf(username)
-	} else {
-		if ret.Get(1) != nil {
-			r1 = ret.Get(1).(*domain.Error)
-		}
-	}
-
-	return r0, r1
-}
-
 // GetUsers provides a mock function with given fields:
 func (_m *UserUsecase) GetUsers() ([]domain.User, *domain.Error) {
 	ret := _m.Called()
@@ -154,6 +122,68 @@ func (_m *UserUsecase) GetUsers() ([]domain.User, *domain.Error) {
 
 	if rf, ok := ret.Get(1).(func() *domain.Error); ok {
 		r1 = rf()
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*domain.Error)
+		}
+	}
+
+	return r0, r1
+}
+
+// LoginUser provides a mock function with given fields: userData
+func (_m *UserUsecase) LoginUser(userData *domain.AuthUserData) (string, *domain.Error) {
+	ret := _m.Called(userData)
+
+	if len(ret) == 0 {
+		panic("no return value specified for LoginUser")
+	}
+
+	var r0 string
+	var r1 *domain.Error
+	if rf, ok := ret.Get(0).(func(*domain.AuthUserData) (string, *domain.Error)); ok {
+		return rf(userData)
+	}
+	if rf, ok := ret.Get(0).(func(*domain.AuthUserData) string); ok {
+		r0 = rf(userData)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	if rf, ok := ret.Get(1).(func(*domain.AuthUserData) *domain.Error); ok {
+		r1 = rf(userData)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*domain.Error)
+		}
+	}
+
+	return r0, r1
+}
+
+// RegisterUser provides a mock function with given fields: userData
+func (_m *UserUsecase) RegisterUser(userData *domain.AuthUserData) (*domain.User, *domain.Error) {
+	ret := _m.Called(userData)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RegisterUser")
+	}
+
+	var r0 *domain.User
+	var r1 *domain.Error
+	if rf, ok := ret.Get(0).(func(*domain.AuthUserData) (*domain.User, *domain.Error)); ok {
+		return rf(userData)
+	}
+	if rf, ok := ret.Get(0).(func(*domain.AuthUserData) *domain.User); ok {
+		r0 = rf(userData)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*domain.User)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(*domain.AuthUserData) *domain.Error); ok {
+		r1 = rf(userData)
 	} else {
 		if ret.Get(1) != nil {
 			r1 = ret.Get(1).(*domain.Error)

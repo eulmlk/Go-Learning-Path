@@ -293,3 +293,33 @@ func GetUser4(userData *domain.UpdateUserData) *domain.User {
 		Role:     userData.Role,
 	}
 }
+
+func GetView(taskData *domain.CreateTaskData, claims *domain.Claims) *domain.TaskView {
+	return &domain.TaskView{
+		ID:          claims.ID.Hex(),
+		Title:       taskData.Title,
+		Description: taskData.Description,
+		DueDate:     taskData.DueDate,
+		Status:      taskData.Status,
+	}
+}
+
+func GetView2(taskData *domain.ReplaceTaskData, claims *domain.Claims) *domain.TaskView {
+	return &domain.TaskView{
+		ID:          claims.ID.Hex(),
+		Title:       taskData.Title,
+		Description: taskData.Description,
+		DueDate:     taskData.DueDate,
+		Status:      taskData.Status,
+	}
+}
+
+func GetView3(taskData *domain.UpdateTaskData, claims *domain.Claims) *domain.TaskView {
+	return &domain.TaskView{
+		ID:          claims.ID.Hex(),
+		Title:       taskData.Title,
+		Description: taskData.Description,
+		DueDate:     taskData.DueDate,
+		Status:      taskData.Status,
+	}
+}

@@ -4,7 +4,6 @@ import (
 	"log"
 	"net/http"
 	"task_manager/domain"
-	"task_manager/usecase"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -12,11 +11,11 @@ import (
 
 // A struct that handles task operations by calling the usecase methods.
 type TaskController struct {
-	usecase *usecase.TaskUsecase
+	usecase domain.TaskUsecase
 }
 
 // A constructor that creates a new instance of TaskController.
-func NewTaskController(usecase *usecase.TaskUsecase) *TaskController {
+func NewTaskController(usecase domain.TaskUsecase) *TaskController {
 	return &TaskController{usecase: usecase}
 }
 

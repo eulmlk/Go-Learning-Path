@@ -67,36 +67,6 @@ func (_m *TaskUsecase) DeleteTask(objectID primitive.ObjectID, claims *domain.Cl
 	return r0
 }
 
-// GetAllTasks provides a mock function with given fields:
-func (_m *TaskUsecase) GetAllTasks() ([]domain.Task, error) {
-	ret := _m.Called()
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetAllTasks")
-	}
-
-	var r0 []domain.Task
-	var r1 error
-	if rf, ok := ret.Get(0).(func() ([]domain.Task, error)); ok {
-		return rf()
-	}
-	if rf, ok := ret.Get(0).(func() []domain.Task); ok {
-		r0 = rf()
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]domain.Task)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func() error); ok {
-		r1 = rf()
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
 // GetTaskByID provides a mock function with given fields: objectID
 func (_m *TaskUsecase) GetTaskByID(objectID primitive.ObjectID) (*domain.Task, *domain.Error) {
 	ret := _m.Called(objectID)
@@ -194,23 +164,23 @@ func (_m *TaskUsecase) ReplaceTask(objectID primitive.ObjectID, taskData *domain
 }
 
 // UpdateTask provides a mock function with given fields: objectID, taskData, claims
-func (_m *TaskUsecase) UpdateTask(objectID primitive.ObjectID, taskData *domain.UpdateTaskData, claims *domain.Claims) (*domain.Task, *domain.Error) {
+func (_m *TaskUsecase) UpdateTask(objectID primitive.ObjectID, taskData *domain.UpdateTaskData, claims *domain.Claims) (*domain.TaskView, *domain.Error) {
 	ret := _m.Called(objectID, taskData, claims)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UpdateTask")
 	}
 
-	var r0 *domain.Task
+	var r0 *domain.TaskView
 	var r1 *domain.Error
-	if rf, ok := ret.Get(0).(func(primitive.ObjectID, *domain.UpdateTaskData, *domain.Claims) (*domain.Task, *domain.Error)); ok {
+	if rf, ok := ret.Get(0).(func(primitive.ObjectID, *domain.UpdateTaskData, *domain.Claims) (*domain.TaskView, *domain.Error)); ok {
 		return rf(objectID, taskData, claims)
 	}
-	if rf, ok := ret.Get(0).(func(primitive.ObjectID, *domain.UpdateTaskData, *domain.Claims) *domain.Task); ok {
+	if rf, ok := ret.Get(0).(func(primitive.ObjectID, *domain.UpdateTaskData, *domain.Claims) *domain.TaskView); ok {
 		r0 = rf(objectID, taskData, claims)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*domain.Task)
+			r0 = ret.Get(0).(*domain.TaskView)
 		}
 	}
 

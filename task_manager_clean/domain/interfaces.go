@@ -27,21 +27,21 @@ type UserRepository interface {
 
 // TaskUsecase defines the interface for task usecase operations.
 type TaskUsecase interface {
-	GetAllTasks() ([]Task, error)
 	GetTasks() ([]Task, *Error)
 	GetTaskByID(objectID primitive.ObjectID) (*Task, *Error)
 	CreateTask(taskData *CreateTaskData, claims *Claims) (*TaskView, *Error)
 	ReplaceTask(objectID primitive.ObjectID, taskData *ReplaceTaskData, claims *Claims) (*TaskView, *Error)
-	UpdateTask(objectID primitive.ObjectID, taskData *UpdateTaskData, claims *Claims) (*Task, *Error)
+	UpdateTask(objectID primitive.ObjectID, taskData *UpdateTaskData, claims *Claims) (*TaskView, *Error)
 	DeleteTask(objectID primitive.ObjectID, claims *Claims) *Error
 }
 
 // UserUsecase defines the interface for user usecase operations.
 type UserUsecase interface {
 	AddUser(userData *CreateUserData, claims *Claims) (*User, *Error)
+	RegisterUser(userData *AuthUserData) (*User, *Error)
+	LoginUser(userData *AuthUserData) (string, *Error)
 	GetUsers() ([]User, *Error)
 	GetUserByID(objectID primitive.ObjectID) (*User, *Error)
-	GetUserByUsername(username string) (*User, *Error)
 	UpdateUser(objectID primitive.ObjectID, userData *UpdateUserData, claims *Claims) (*User, *Error)
 	DeleteUser(objectID primitive.ObjectID, claims *Claims) *Error
 }
