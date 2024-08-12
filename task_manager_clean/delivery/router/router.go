@@ -40,14 +40,16 @@ func ProtectedUserRoutes(router *gin.Engine, userController *controllers.UserCon
 }
 
 func GetTaskController(db *mongo.Database) *controllers.TaskController {
-	taskRepository := repository.NewMongoTaskRepository(db.Collection(domain.TaskCollection))
+	collection := &repository.MongoCollection{Collection: db.Collection(domain.TaskCollection)}
+	taskRepository := repository.NewMongoTaskRepository(collection)
 	taskUsecase := usecase.NewTaskUsecase(taskRepository)
 	taskController := controllers.NewTaskController(taskUsecase)
 	return taskController
 }
 
 func GetUserController(db *mongo.Database) *controllers.UserController {
-	userRepository := repository.NewMongoUserRepository(db.Collection(domain.UserCollection))
+	collection := &repository.MongoCollection{Collection: db.Collection(domain.UserCollection)}
+	userRepository := repository.NewMongoUserRepository(collection)
 	userUsecase := usecase.NewUserUsecase(userRepository)
 	userController := controllers.NewUserController(userUsecase)
 	return userController

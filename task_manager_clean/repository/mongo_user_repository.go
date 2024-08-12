@@ -6,16 +6,15 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 // This struct is a MongoDB implementation of the UserRepository interface.
 type MongoUserRepository struct {
-	collection *mongo.Collection
+	collection domain.Collection
 }
 
 // A constructor that creates a new instance of MongoUserRepository.
-func NewMongoUserRepository(collection *mongo.Collection) *MongoUserRepository {
+func NewMongoUserRepository(collection domain.Collection) *MongoUserRepository {
 	return &MongoUserRepository{
 		collection: collection,
 	}

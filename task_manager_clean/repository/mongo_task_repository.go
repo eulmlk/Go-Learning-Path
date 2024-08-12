@@ -6,16 +6,15 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 // This struct is a MongoDB implementation of the TaskRepository interface.
 type MongoTaskRepository struct {
-	collection *mongo.Collection
+	collection domain.Collection
 }
 
 // A constructor that creates a new instance of MongoTaskRepository.
-func NewMongoTaskRepository(collection *mongo.Collection) *MongoTaskRepository {
+func NewMongoTaskRepository(collection domain.Collection) *MongoTaskRepository {
 	return &MongoTaskRepository{
 		collection: collection,
 	}

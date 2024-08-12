@@ -1,158 +1,211 @@
 package repository_test
 
 import (
-	"context"
-	"task_manager/database"
 	"task_manager/domain"
 	"task_manager/mocks"
 	"task_manager/repository"
 	"testing"
 
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-const (
-	userCollection = "users_test"
-)
+var mockUser = mock.AnythingOfType("*domain.User")
 
-type MongoUserRepositorySuite struct {
+// A suite that contains tests for the MongoTaskRepository.
+type MongoUserRepositoryTestSuite struct {
 	suite.Suite
 	repo       *repository.MongoUserRepository
-	collection *mongo.Collection
-	client     *mongo.Client
+	collection *mocks.Collection
 }
 
-func (suite *MongoUserRepositorySuite) SetupSuite() {
-	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
-	client, err := mongo.Connect(context.Background(), clientOptions)
-	suite.NoError(err)
-	suite.NoError(client.Ping(context.Background(), nil))
-	suite.client = client
-
-	db := client.Database(database.DatabaseName)
-	suite.collection = db.Collection(userCollection)
-	suite.NoError(suite.collection.Drop(context.Background()))
-
+// A method that initializes the test suite.
+func (suite *MongoUserRepositoryTestSuite) SetupSuite() {
+	suite.collection = new(mocks.Collection)
 	suite.repo = repository.NewMongoUserRepository(suite.collection)
 }
 
-func (suite *MongoUserRepositorySuite) SetupTest() {
-	err := suite.collection.Drop(context.Background())
-	suite.NoError(err)
+// A method that finalizes the test suite.
+func (suite *MongoUserRepositoryTestSuite) TearDownSuite() {
+	suite.collection.AssertExpectations(suite.T())
 }
 
-func (suite *MongoUserRepositorySuite) TearDownSuite() {
-	err := suite.collection.Drop(context.Background())
-	suite.NoError(err)
-	err = suite.client.Disconnect(context.Background())
-	suite.NoError(err)
+// A test for the MongoUserRepository.AddUser method.
+func (suite *MongoUserRepositoryTestSuite) TestAddUser() {
+	// A testcase for the successful addition of a user.
+	suite.Run("AddUser_Success", func() {
+		user := mocks.GetNewUser()
+		suite.collection.On("InsertOne", mock.Anything, user).Return(&mongo.InsertOneResult{}, nil).Once()
+
+		err := suite.repo.AddUser(user)
+		suite.NoError(err)
+	})
+
+	// A testcase for the failure of adding a user.
+	suite.Run("AddUser_Failure", func() {
+		user := mocks.GetNewUser()
+		suite.collection.On("InsertOne", mock.Anything, user).Return(&mongo.InsertOneResult{}, mongo.ErrClientDisconnected).Once()
+
+		err := suite.repo.AddUser(user)
+		suite.Error(err)
+	})
 }
 
-func (suite *MongoUserRepositorySuite) TestAddUser() {
-	user := mocks.GetNewUser()
+// A test for the MongoUserRepository.GetUsers method.
+func (suite *MongoUserRepositoryTestSuite) TestGetUsers() {
+	// A testcase for the successful retrieval of users.
+	suite.Run("GetUsers_Success", func() {
+		users := mocks.GetManyUsers()
+		cursor := new(mocks.Cursor)
 
-	err := suite.repo.AddUser(user)
-	suite.NoError(err)
+		suite.collection.On("Find", mock.Anything, mock.Anything).Return(cursor, nil).Once()
+		cursor.On("All", mock.Anything, &[]domain.User{}).Return(nil).Once().Run(func(args mock.Arguments) {
+			usersPtr := args.Get(1).(*[]domain.User)
+			*usersPtr = append(*usersPtr, users...)
+		})
 
-	count, err := suite.collection.CountDocuments(context.Background(), bson.M{})
-	suite.NoError(err)
-	suite.Equal(int64(1), count)
+		result, err := suite.repo.GetUsers()
 
-	addedUser, err := suite.repo.GetUserByID(user.ID)
-	suite.NoError(err)
-	suite.Equal(*user, *addedUser)
+		suite.NoError(err)
+		suite.Equal(users, result)
+	})
+
+	// A testcase for the failure of retrieving users.
+	suite.Run("GetUsers_Failure", func() {
+		suite.collection.On("Find", mock.Anything, mock.Anything).Return(nil, mongo.ErrClientDisconnected).Once()
+
+		result, err := suite.repo.GetUsers()
+		suite.Error(err)
+		suite.Nil(result)
+	})
 }
 
-func (suite *MongoUserRepositorySuite) TestGetUsers() {
-	user1 := mocks.GetNewUser()
-	user2 := mocks.GetNewUser2()
+// A test for the MongoUserRepository.GetUserByID method.
+func (suite *MongoUserRepositoryTestSuite) TestGetUserByID() {
+	// A testcase for the successful retrieval of a user by ID.
+	suite.Run("GetUserByID_Success", func() {
+		user := mocks.GetNewUser()
+		id := user.ID
 
-	users, err := suite.repo.GetUsers()
-	suite.NoError(err)
-	suite.Len(users, 0)
+		res := new(mocks.SingleResult)
+		res.On("Decode", mock.Anything).Return(nil).Once().RunFn = func(args mock.Arguments) {
+			userPtr := args.Get(0).(*domain.User)
+			*userPtr = *user
+		}
 
-	_, err = suite.collection.InsertMany(context.Background(), []interface{}{user1, user2})
-	suite.NoError(err)
+		suite.collection.On("FindOne", mock.Anything, mock.Anything).Return(res).Once()
 
-	users, err = suite.repo.GetUsers()
-	suite.NoError(err)
-	suite.Len(users, 2)
+		result, err := suite.repo.GetUserByID(id)
+
+		suite.NoError(err)
+		suite.Equal(user, result)
+	})
+
+	// A testcase for the failure of retrieving a user by ID.
+	suite.Run("GetUserByID_Failure", func() {
+		id := primitive.NewObjectID()
+
+		res := new(mocks.SingleResult)
+		res.On("Decode", mockUser).Return(mongo.ErrNoDocuments).Once()
+		suite.collection.On("FindOne", mock.Anything, mock.Anything).Return(res).Once()
+
+		result, err := suite.repo.GetUserByID(id)
+		suite.Error(err)
+		suite.Nil(result)
+	})
 }
 
-func (suite *MongoUserRepositorySuite) TestGetUserByID() {
-	user := mocks.GetNewUser()
+// A test for the MongoUserRepository.GetUserByUsername method.
+func (suite *MongoUserRepositoryTestSuite) TestGetUserByUsername() {
+	// A testcase for the successful retrieval of a user by username.
+	suite.Run("GetUserByUsername_Success", func() {
+		user := mocks.GetNewUser()
+		username := user.Username
 
-	foundUser, err := suite.repo.GetUserByID(user.ID)
-	suite.Error(err)
-	suite.Nil(foundUser)
+		res := new(mocks.SingleResult)
+		res.On("Decode", mock.Anything).Return(nil).Once().Run(func(args mock.Arguments) {
+			userPtr := args.Get(0).(*domain.User)
+			*userPtr = *user
+		})
 
-	_, err = suite.collection.InsertOne(context.Background(), user)
-	suite.NoError(err)
+		suite.collection.On("FindOne", mock.Anything, mock.Anything).Return(res).Once()
 
-	added, err := suite.repo.GetUserByID(user.ID)
-	suite.NoError(err)
-	suite.Equal(user, added)
+		result, err := suite.repo.GetUserByUsername(username)
+
+		suite.NoError(err)
+		suite.Equal(user, result)
+	})
+
+	// A testcase for the failure of retrieving a user by username.
+	suite.Run("GetUserByUsername_Failure", func() {
+		username := "nonexistent"
+
+		res := new(mocks.SingleResult)
+		res.On("Decode", mockUser).Return(mongo.ErrNoDocuments).Once()
+		suite.collection.On("FindOne", mock.Anything, mock.Anything).Return(res).Once()
+
+		result, err := suite.repo.GetUserByUsername(username)
+		suite.Error(err)
+		suite.Nil(result)
+	})
 }
 
-func (suite *MongoUserRepositorySuite) TestGetUserByUsername() {
-	user := mocks.GetNewUser()
+// A test for the MongoUserRepository.UpdateUser method.
+func (suite *MongoUserRepositoryTestSuite) TestUpdateUser() {
+	// A testcase for the successful update of a user.
+	suite.Run("UpdateUser_Success", func() {
+		user := mocks.GetNewUser()
+		id := user.ID
+		userData := bson.M{"username": "new_username"}
 
-	foundUser, err := suite.repo.GetUserByUsername(user.Username)
-	suite.Error(err)
-	suite.Nil(foundUser)
+		suite.collection.On("UpdateOne", mock.Anything, mock.Anything, mock.Anything).Return(&mongo.UpdateResult{}, nil).Once()
 
-	_, err = suite.collection.InsertOne(context.Background(), user)
-	suite.NoError(err)
+		err := suite.repo.UpdateUser(id, userData)
+		suite.NoError(err)
+	})
 
-	userFromDB, err := suite.repo.GetUserByUsername(user.Username)
-	suite.NoError(err)
-	suite.Equal(user, userFromDB)
+	// A testcase for the failure of updating a user.
+	suite.Run("UpdateUser_Failure", func() {
+		user := mocks.GetNewUser()
+		id := user.ID
+		userData := bson.M{"username": "new_username"}
+
+		suite.collection.On("UpdateOne", mock.Anything, mock.Anything, mock.Anything).Return(&mongo.UpdateResult{}, mongo.ErrClientDisconnected).Once()
+
+		err := suite.repo.UpdateUser(id, userData)
+		suite.Error(err)
+	})
 }
 
-func (suite *MongoUserRepositorySuite) TestUpdateUser() {
-	user := mocks.GetNewUser()
+// A test for the MongoUserRepository.DeleteUser method.
+func (suite *MongoUserRepositoryTestSuite) TestDeleteUser() {
+	// A testcase for the successful deletion of a user.
+	suite.Run("DeleteUser_Success", func() {
+		user := mocks.GetNewUser()
+		id := user.ID
 
-	_, err := suite.collection.InsertOne(context.Background(), user)
-	suite.NoError(err)
+		suite.collection.On("DeleteOne", mock.Anything, mock.Anything).Return(&mongo.DeleteResult{}, nil).Once()
 
-	update := bson.M{
-		"username": "new_username",
-		"password": "new_password",
-	}
+		err := suite.repo.DeleteUser(id)
+		suite.NoError(err)
+	})
 
-	expectedUser := &domain.User{
-		ID:       user.ID,
-		Username: "new_username",
-		Password: "new_password",
-		Role:     user.Role,
-	}
+	// A testcase for the failure of deleting a user.
+	suite.Run("DeleteUser_Failure", func() {
+		user := mocks.GetNewUser()
+		id := user.ID
 
-	err = suite.repo.UpdateUser(user.ID, update)
-	suite.NoError(err)
+		suite.collection.On("DeleteOne", mock.Anything, mock.Anything).Return(&mongo.DeleteResult{}, mongo.ErrClientDisconnected).Once()
 
-	userFromDB := &domain.User{}
-	err = suite.collection.FindOne(context.Background(), bson.M{"_id": user.ID}).Decode(userFromDB)
-	suite.NoError(err)
-	suite.Equal(expectedUser, userFromDB)
+		err := suite.repo.DeleteUser(id)
+		suite.Error(err)
+	})
 }
 
-func (suite *MongoUserRepositorySuite) TestDeleteUser() {
-	user := mocks.GetNewUser()
-
-	_, err := suite.collection.InsertOne(context.Background(), user)
-	suite.NoError(err)
-
-	err = suite.repo.DeleteUser(user.ID)
-	suite.NoError(err)
-
-	count, err := suite.collection.CountDocuments(context.Background(), bson.M{})
-	suite.NoError(err)
-	suite.Equal(int64(0), count)
-}
-
-func TestMongoUserRepositorySuite(t *testing.T) {
-	suite.Run(t, new(MongoUserRepositorySuite))
+// A function that runs the MongoUserRepositoryTestSuite.
+func TestMongoUserRepositoryTestSuite(t *testing.T) {
+	suite.Run(t, new(MongoUserRepositoryTestSuite))
 }

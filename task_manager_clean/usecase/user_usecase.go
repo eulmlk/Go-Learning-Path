@@ -205,7 +205,7 @@ func (u *UserUsecase) UpdateUser(objectID primitive.ObjectID, userData *domain.U
 	}
 
 	// Update the user in the database.
-	err = u.userRepo.UpdateUser(objectID, bson.M{"$set": updateData})
+	err = u.userRepo.UpdateUser(objectID, updateData)
 	if err != nil {
 		return nil, &domain.Error{
 			Err:        err,

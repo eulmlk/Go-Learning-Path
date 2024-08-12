@@ -10,10 +10,10 @@ var (
 
 // A struct that defines the user model.
 type User struct {
-	ID       primitive.ObjectID `json:"id" bson:"_id"`
-	Username string             `json:"username"`
-	Password string             `json:"password"`
-	Role     string             `json:"role"`
+	ID       primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	Username string             `json:"username" bson:"username"`
+	Password string             `json:"password" bson:"password"`
+	Role     string             `json:"role" bson:"role"`
 }
 
 // A struct that defines the data required to register/login a user.

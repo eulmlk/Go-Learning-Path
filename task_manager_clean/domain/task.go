@@ -13,11 +13,11 @@ var (
 // A struct that defines the task model.
 type Task struct {
 	ID          primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	Title       string             `json:"title"`
-	Description string             `json:"description"`
-	DueDate     time.Time          `json:"due_date"`
-	Status      string             `json:"status"`
-	UserID      primitive.ObjectID `json:"user_id"`
+	Title       string             `json:"title" bson:"title"`
+	Description string             `json:"description" bson:"description"`
+	DueDate     time.Time          `json:"due_date" bson:"due_date"`
+	Status      string             `json:"status" bson:"status"`
+	UserID      primitive.ObjectID `json:"user_id" bson:"user_id"`
 }
 
 // A struct that defines the data required to create a task.
