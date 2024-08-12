@@ -3,7 +3,6 @@ package domain
 import (
 	"time"
 
-	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -52,14 +51,4 @@ type TaskView struct {
 	Description string    `json:"description"`
 	DueDate     time.Time `json:"due_date"`
 	Status      string    `json:"status"`
-}
-
-// TaskRepository defines the interface for task repository operations.
-type TaskRepository interface {
-	GetAllTasks() ([]Task, error)
-	GetTaskByID(id primitive.ObjectID) (*Task, error)
-	AddTask(task *Task) error
-	ReplaceTask(id primitive.ObjectID, taskData *Task) error
-	UpdateTask(id primitive.ObjectID, taskData bson.M) error
-	DeleteTask(id primitive.ObjectID) error
 }

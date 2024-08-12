@@ -4,12 +4,11 @@ import (
 	"context"
 	"task_manager/database"
 	"task_manager/domain"
+	"task_manager/mocks"
 	"task_manager/repository"
 	"testing"
-	"time"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -20,253 +19,204 @@ const (
 	taskTestCollection = "tasks_test"
 )
 
-// A test for the MongoTaskRepository.GetAllTasks method.
-func TestMongoTaskRepository_GetAllTasks(t *testing.T) {
-	client, collection := setupTaskCollection(t)
-	defer client.Disconnect(context.Background())
-
-	repo := repository.NewMongoTaskRepository(collection)
-	task1 := getNewTask1()
-	task2 := getNewTask2()
-
-	// A test case for an empty collection
-	t.Run("GetAllTasks_Empty", func(t *testing.T) {
-		tasks, err := repo.GetAllTasks()
-		require.NoError(t, err)
-		assert.Len(t, tasks, 0)
-	})
-
-	// A test case for a non-empty collection
-	t.Run("GetAllTasks_NotEmpty", func(t *testing.T) {
-		_, err := collection.InsertMany(context.Background(), []interface{}{task1, task2})
-		require.NoError(t, err)
-
-		tasks, err := repo.GetAllTasks()
-		require.NoError(t, err)
-		assert.Len(t, tasks, 2)
-	})
+type MongoTaskRepositorySuite struct {
+	suite.Suite
+	repo       *repository.MongoTaskRepository
+	collection *mongo.Collection
+	client     *mongo.Client
 }
 
-// A test for the MongoTaskRepository.GetTaskByUserID method.
-func TestMongoTaskRepository_GetTaskByID(t *testing.T) {
-	client, collection := setupTaskCollection(t)
-	defer client.Disconnect(context.Background())
-
-	repo := repository.NewMongoTaskRepository(collection)
-	task := getNewTask1()
-
-	// A test case for a task not found
-	t.Run("GetTaskByID_NotFound", func(t *testing.T) {
-		foundTask, err := repo.GetTaskByID(task.ID)
-		assert.Error(t, err)
-
-		assert.Equal(t, *foundTask, domain.Task{})
-	})
-
-	// A test case for a task found
-	t.Run("GetTaskByID_Found", func(t *testing.T) {
-		_, err := collection.InsertOne(context.Background(), task)
-		require.NoError(t, err)
-
-		foundTask, err := repo.GetTaskByID(task.ID)
-		require.NoError(t, err)
-
-		assert.Equal(t, *task, *foundTask)
-	})
-}
-
-// A test for the MongoTaskRepository.GetTaskByUserID method.
-func TestMongoTaskRepository_CreateTask(t *testing.T) {
-	client, collection := setupTaskCollection(t)
-	defer client.Disconnect(context.Background())
-
-	repo := repository.NewMongoTaskRepository(collection)
-	taskData := getNewTask1()
-
-	// A test case for creating a task
-	t.Run("CreateTask", func(t *testing.T) {
-		// 1. Check the number of tasks in the collection
-		count, err := collection.CountDocuments(context.Background(), bson.M{})
-		require.NoError(t, err)
-		assert.Equal(t, int64(0), count)
-
-		// 2. Add a new task to the collection
-		err = repo.AddTask(taskData)
-		require.NoError(t, err)
-
-		// 3. Check the number of tasks in the collection after adding a new task
-		count, err = collection.CountDocuments(context.Background(), bson.M{})
-		require.NoError(t, err)
-		assert.Equal(t, int64(1), count)
-
-		// 4. Check if the task was added correctly
-		foundTask := &domain.Task{}
-		result := collection.FindOne(context.Background(), taskData)
-		require.NoError(t, result.Err())
-		require.NoError(t, result.Decode(foundTask))
-		assert.Equal(t, taskData, foundTask)
-	})
-}
-
-// A test for the MongoTaskRepository.GetTaskByUserID method.
-func TestMongoTaskRepository_ReplaceTask(t *testing.T) {
-	client, collection := setupTaskCollection(t)
-	defer client.Disconnect(context.Background())
-
-	repo := repository.NewMongoTaskRepository(collection)
-	taskData := getNewTask1()
-
-	// A test case when the task is not found
-	t.Run("ReplaceTask_NotFound", func(t *testing.T) {
-		err := repo.ReplaceTask(taskData.ID, taskData)
-		assert.Error(t, err)
-	})
-
-	_, err := collection.InsertOne(context.Background(), taskData)
-	require.NoError(t, err)
-
-	// A test case when the task is found
-	t.Run("ReplaceTask_Found", func(t *testing.T) {
-		newTaskData := getNewTask2()
-		newTaskData.ID = taskData.ID
-		err := repo.ReplaceTask(taskData.ID, newTaskData)
-		require.NoError(t, err)
-
-		taskFromDB := &domain.Task{}
-		result := collection.FindOne(context.Background(), bson.M{"_id": taskData.ID})
-		require.NoError(t, result.Decode(taskFromDB))
-		assert.Equal(t, *newTaskData, *taskFromDB)
-	})
-}
-
-// A test for the MongoTaskRepository.GetTaskByUserID method.
-func TestMongoTaskRepository_UpdateTask(t *testing.T) {
-	client, collection := setupTaskCollection(t)
-	defer client.Disconnect(context.Background())
-
-	repo := repository.NewMongoTaskRepository(collection)
-	taskData := getNewTask1()
-
-	_, err := collection.InsertOne(context.Background(), taskData)
-	require.NoError(t, err)
-
-	// A test case when the task is found
-	t.Run("UpdateTask_Found", func(t *testing.T) {
-		taskUpdate := bson.M{
-			"title":  "New Task",
-			"status": "Completed",
-		}
-
-		expectedTask := &domain.Task{
-			ID:          taskData.ID,
-			Title:       "New Task",
-			Description: taskData.Description,
-			DueDate:     taskData.DueDate,
-			Status:      "Completed",
-			UserID:      taskData.UserID,
-		}
-
-		err := repo.UpdateTask(taskData.ID, taskUpdate)
-		require.NoError(t, err)
-
-		taskFromDB := &domain.Task{}
-		err = collection.FindOne(context.Background(), bson.M{"_id": taskData.ID}).Decode(taskFromDB)
-		require.NoError(t, err)
-		assert.Equal(t, *expectedTask, *taskFromDB)
-	})
-
-	// A second test case for updating a task
-	t.Run("UpdateTask_Second", func(t *testing.T) {
-		taskUpdate := bson.M{
-			"title":       "Another New Task",
-			"description": "New Description",
-		}
-
-		expectedTask := &domain.Task{
-			ID:          taskData.ID,
-			Title:       "Another New Task",
-			Description: "New Description",
-			DueDate:     taskData.DueDate,
-			Status:      "Completed",
-			UserID:      taskData.UserID,
-		}
-
-		err := repo.UpdateTask(taskData.ID, taskUpdate)
-		require.NoError(t, err)
-
-		taskFromDB := &domain.Task{}
-		err = collection.FindOne(context.Background(), bson.M{"_id": taskData.ID}).Decode(taskFromDB)
-		require.NoError(t, err)
-		assert.Equal(t, *expectedTask, *taskFromDB)
-	})
-
-	// A test case for updating the _id field
-	t.Run("UpdateTask_ID", func(t *testing.T) {
-		taskUpdate := bson.M{
-			"_id": primitive.NewObjectID(),
-		}
-
-		err := repo.UpdateTask(taskData.ID, taskUpdate)
-		assert.Error(t, err)
-	})
-}
-
-// A test for the MongoTaskRepository.DeleteTask method.
-func TestMongoTaskRepository_DeleteTask(t *testing.T) {
-	client, collection := setupTaskCollection(t)
-	defer client.Disconnect(context.Background())
-
-	repo := repository.NewMongoTaskRepository(collection)
-	taskData := getNewTask1()
-
-	_, err := collection.InsertOne(context.Background(), taskData)
-	require.NoError(t, err)
-
-	// A test case for deleting a task
-	t.Run("DeleteTask_Found", func(t *testing.T) {
-		err = repo.DeleteTask(taskData.ID)
-		require.NoError(t, err)
-
-		_, err = repo.GetTaskByID(taskData.ID)
-		assert.Error(t, err)
-	})
-}
-
-func setupTaskCollection(t *testing.T) (*mongo.Client, *mongo.Collection) {
+func (suite *MongoTaskRepositorySuite) SetupSuite() {
 	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
 	client, err := mongo.Connect(context.Background(), clientOptions)
-	require.NoError(t, err)
-	require.NoError(t, client.Ping(context.Background(), nil))
+	suite.NoError(err)
+	suite.NoError(client.Ping(context.Background(), nil))
+	suite.client = client
 
 	db := client.Database(database.DatabaseName)
-	collection := db.Collection(taskTestCollection)
-	require.NoError(t, collection.Drop(context.Background()))
+	suite.collection = db.Collection(taskTestCollection)
+	suite.NoError(suite.collection.Drop(context.Background()))
 
-	return client, collection
+	suite.repo = repository.NewMongoTaskRepository(suite.collection)
 }
 
-func getNewTask1() *domain.Task {
-	return &domain.Task{
-		ID:          primitive.NewObjectID(),
-		Title:       "My First Task",
-		Description: "This is some example description for the first task.",
-		DueDate:     format(time.Now().AddDate(0, 0, 3)),
-		Status:      "In Progress",
-		UserID:      primitive.NewObjectID(),
+func (suite *MongoTaskRepositorySuite) SetupTest() {
+	suite.NoError(suite.collection.Drop(context.Background()))
+}
+
+func (suite *MongoTaskRepositorySuite) TearDownSuite() {
+	suite.NoError(suite.client.Disconnect(context.Background()))
+}
+
+func (suite *MongoTaskRepositorySuite) TestGetAllTasks_Empty() {
+	tasks, err := suite.repo.GetAllTasks()
+	suite.NoError(err)
+	suite.Len(tasks, 0)
+}
+
+func (suite *MongoTaskRepositorySuite) TestGetAllTasks_NotEmpty() {
+	task1 := mocks.GetNewTask()
+	task2 := mocks.GetNewTask2()
+
+	_, err := suite.collection.InsertMany(context.Background(), []interface{}{task1, task2})
+	suite.NoError(err)
+
+	tasks, err := suite.repo.GetAllTasks()
+	suite.NoError(err)
+	suite.Len(tasks, 2)
+}
+
+func (suite *MongoTaskRepositorySuite) TestGetTaskByID_NotFound() {
+	task := mocks.GetNewTask()
+
+	foundTask, err := suite.repo.GetTaskByID(task.ID)
+	suite.Error(err)
+
+	suite.Equal(domain.Task{}, *foundTask)
+}
+
+func (suite *MongoTaskRepositorySuite) TestGetTaskByID_Found() {
+	task := mocks.GetNewTask()
+
+	_, err := suite.collection.InsertOne(context.Background(), task)
+	suite.NoError(err)
+
+	foundTask, err := suite.repo.GetTaskByID(task.ID)
+	suite.NoError(err)
+
+	suite.Equal(*task, *foundTask)
+}
+
+func (suite *MongoTaskRepositorySuite) TestCreateTask() {
+	taskData := mocks.GetNewTask()
+
+	count, err := suite.collection.CountDocuments(context.Background(), bson.M{})
+	suite.NoError(err)
+	suite.Equal(int64(0), count)
+
+	err = suite.repo.AddTask(taskData)
+	suite.NoError(err)
+
+	count, err = suite.collection.CountDocuments(context.Background(), bson.M{})
+	suite.NoError(err)
+	suite.Equal(int64(1), count)
+
+	foundTask := &domain.Task{}
+	result := suite.collection.FindOne(context.Background(), taskData)
+	suite.NoError(result.Err())
+	suite.NoError(result.Decode(foundTask))
+	suite.Equal(taskData, foundTask)
+}
+
+func (suite *MongoTaskRepositorySuite) TestReplaceTask_NotFound() {
+	taskData := mocks.GetNewTask()
+
+	err := suite.repo.ReplaceTask(taskData.ID, taskData)
+	suite.Error(err)
+}
+
+func (suite *MongoTaskRepositorySuite) TestReplaceTask_Found() {
+	taskData := mocks.GetNewTask()
+
+	_, err := suite.collection.InsertOne(context.Background(), taskData)
+	suite.NoError(err)
+
+	newTaskData := mocks.GetNewTask2()
+	newTaskData.ID = taskData.ID
+	err = suite.repo.ReplaceTask(taskData.ID, newTaskData)
+	suite.NoError(err)
+
+	taskFromDB := &domain.Task{}
+	result := suite.collection.FindOne(context.Background(), bson.M{"_id": taskData.ID})
+	suite.NoError(result.Decode(taskFromDB))
+	suite.Equal(*newTaskData, *taskFromDB)
+}
+
+func (suite *MongoTaskRepositorySuite) TestUpdateTask_Found() {
+	taskData := mocks.GetNewTask()
+
+	_, err := suite.collection.InsertOne(context.Background(), taskData)
+	suite.NoError(err)
+
+	taskUpdate := bson.M{
+		"title":  "New Task",
+		"status": "Completed",
 	}
-}
 
-func getNewTask2() *domain.Task {
-	return &domain.Task{
-		ID:          primitive.NewObjectID(),
-		Title:       "My Second Task",
-		Description: "This is some example description for the second task.",
-		DueDate:     format(time.Now().AddDate(0, 0, 1)),
+	expectedTask := &domain.Task{
+		ID:          taskData.ID,
+		Title:       "New Task",
+		Description: taskData.Description,
+		DueDate:     taskData.DueDate,
 		Status:      "Completed",
-		UserID:      primitive.NewObjectID(),
+		UserID:      taskData.UserID,
 	}
+
+	err = suite.repo.UpdateTask(taskData.ID, taskUpdate)
+	suite.NoError(err)
+
+	taskFromDB := &domain.Task{}
+	err = suite.collection.FindOne(context.Background(), bson.M{"_id": taskData.ID}).Decode(taskFromDB)
+	suite.NoError(err)
+	suite.Equal(*expectedTask, *taskFromDB)
 }
 
-func format(d time.Time) time.Time {
-	return d.UTC().Truncate(time.Millisecond)
+func (suite *MongoTaskRepositorySuite) TestUpdateTask_Second() {
+	taskData := mocks.GetNewTask()
+
+	_, err := suite.collection.InsertOne(context.Background(), taskData)
+	suite.NoError(err)
+
+	taskUpdate := bson.M{
+		"title":       "Another New Task",
+		"description": "New Description",
+	}
+
+	expectedTask := &domain.Task{
+		ID:          taskData.ID,
+		Title:       "Another New Task",
+		Description: "New Description",
+		DueDate:     taskData.DueDate,
+		Status:      "Completed",
+		UserID:      taskData.UserID,
+	}
+
+	err = suite.repo.UpdateTask(taskData.ID, taskUpdate)
+	suite.NoError(err)
+
+	taskFromDB := &domain.Task{}
+	err = suite.collection.FindOne(context.Background(), bson.M{"_id": taskData.ID}).Decode(taskFromDB)
+	suite.NoError(err)
+	suite.Equal(*expectedTask, *taskFromDB)
+}
+
+func (suite *MongoTaskRepositorySuite) TestUpdateTask_ID() {
+	taskData := mocks.GetNewTask()
+
+	_, err := suite.collection.InsertOne(context.Background(), taskData)
+	suite.NoError(err)
+
+	taskUpdate := bson.M{
+		"_id": primitive.NewObjectID(),
+	}
+
+	err = suite.repo.UpdateTask(taskData.ID, taskUpdate)
+	suite.Error(err)
+}
+
+func (suite *MongoTaskRepositorySuite) TestDeleteTask() {
+	taskData := mocks.GetNewTask()
+
+	_, err := suite.collection.InsertOne(context.Background(), taskData)
+	suite.NoError(err)
+
+	err = suite.repo.DeleteTask(taskData.ID)
+	suite.NoError(err)
+
+	_, err = suite.repo.GetTaskByID(taskData.ID)
+	suite.Error(err)
+}
+
+func TestMongoTaskRepositorySuite(t *testing.T) {
+	suite.Run(t, new(MongoTaskRepositorySuite))
 }

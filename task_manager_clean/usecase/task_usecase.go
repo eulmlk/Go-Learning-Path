@@ -26,6 +26,7 @@ func NewTaskUsecase(taskRepo domain.TaskRepository) *TaskUsecase {
 func (tu *TaskUsecase) GetTasks() ([]domain.Task, *domain.Error) {
 	// Query the database for all tasks.
 	tasks, err := tu.taskRepo.GetAllTasks()
+
 	if err != nil {
 		return nil, &domain.Error{
 			Err:        err,
@@ -97,13 +98,13 @@ func (tu *TaskUsecase) CreateTask(taskData *domain.CreateTaskData, claims *domai
 // A method that fully replaces a task with the given ID with the new task data.
 func (tu *TaskUsecase) ReplaceTask(objectID primitive.ObjectID, taskData *domain.ReplaceTaskData, claims *domain.Claims) (*domain.TaskView, *domain.Error) {
 	// Check if the task exists.
-	_, _err := tu.GetTaskByID(objectID)
+	foundTask, _err := tu.GetTaskByID(objectID)
 	if _err != nil {
 		return nil, _err
 	}
 
 	// Check if the user is an admin or the owner of the task.
-	if claims.Role == "user" && claims.ID != objectID {
+	if claims.Role == "user" && claims.ID != foundTask.UserID {
 		return nil, &domain.Error{
 			Err:        errors.New("trying to replace another user's task"),
 			StatusCode: http.StatusForbidden,
@@ -131,37 +132,28 @@ func (tu *TaskUsecase) ReplaceTask(objectID primitive.ObjectID, taskData *domain
 		}
 	}
 
-	newTask, err := tu.taskRepo.GetTaskByID(objectID)
-	if err != nil {
-		return nil, &domain.Error{
-			Err:        err,
-			StatusCode: http.StatusInternalServerError,
-			Message:    "Internal server error",
-		}
-	}
-
 	// Create the task view object.
 	taskView := &domain.TaskView{
-		ID:          newTask.ID.Hex(),
-		Title:       newTask.Title,
-		Description: newTask.Description,
-		DueDate:     newTask.DueDate,
-		Status:      newTask.Status,
+		ID:          objectID.Hex(),
+		Title:       taskData.Title,
+		Description: taskData.Description,
+		DueDate:     taskData.DueDate,
+		Status:      taskData.Status,
 	}
 
 	return taskView, nil
 }
 
 // A method that partially updates a task with the given ID with the only the provided task data.
-func (tu *TaskUsecase) UpdateTask(objectID primitive.ObjectID, taskData *domain.UpdateTaskData, claims *domain.Claims) (*domain.Task, *domain.Error) {
+func (tu *TaskUsecase) UpdateTask(objectID primitive.ObjectID, taskData *domain.UpdateTaskData, claims *domain.Claims) (*domain.TaskView, *domain.Error) {
 	// Check if the task exists.
-	_, _err := tu.GetTaskByID(objectID)
+	foundTask, _err := tu.GetTaskByID(objectID)
 	if _err != nil {
 		return nil, _err
 	}
 
 	// Check if the user is an admin or the owner of the task.
-	if claims.Role == "user" && claims.ID != objectID {
+	if claims.Role == "user" && claims.ID != foundTask.UserID {
 		return nil, &domain.Error{
 			Err:        errors.New("trying to update another user's task"),
 			StatusCode: http.StatusForbidden,
@@ -194,26 +186,43 @@ func (tu *TaskUsecase) UpdateTask(objectID primitive.ObjectID, taskData *domain.
 		}
 	}
 
-	task, err := tu.taskRepo.GetTaskByID(objectID)
-	if err != nil {
-		return nil, &domain.Error{
-			Err:        err,
-			StatusCode: http.StatusInternalServerError,
-			Message:    "Internal server error",
-		}
+	taskView := &domain.TaskView{}
+	taskView.ID = objectID.Hex()
+	if taskData.Title != "" {
+		taskView.Title = taskData.Title
+	} else {
+		taskView.Title = foundTask.Title
 	}
 
-	return task, nil
+	if taskData.Description != "" {
+		taskView.Description = taskData.Description
+	} else {
+		taskView.Description = foundTask.Description
+	}
+
+	if taskData.Status != "" {
+		taskView.Status = taskData.Status
+	} else {
+		taskView.Status = foundTask.Status
+	}
+
+	if !taskData.DueDate.IsZero() {
+		taskView.DueDate = taskData.DueDate
+	} else {
+		taskView.DueDate = foundTask.DueDate
+	}
+
+	return taskView, nil
 }
 
 func (tu *TaskUsecase) DeleteTask(objectID primitive.ObjectID, claims *domain.Claims) *domain.Error {
-	_, _err := tu.GetTaskByID(objectID)
+	foundTask, _err := tu.GetTaskByID(objectID)
 	if _err != nil {
 		return _err
 	}
 
 	// Check if the user is an admin or the owner of the task.
-	if claims.Role == "user" && claims.ID != objectID {
+	if claims.Role == "user" && claims.ID != foundTask.UserID {
 		return &domain.Error{
 			Err:        errors.New("trying to delete another user's task"),
 			StatusCode: http.StatusForbidden,

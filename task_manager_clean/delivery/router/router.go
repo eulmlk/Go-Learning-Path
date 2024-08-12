@@ -16,6 +16,9 @@ import (
 func PublicRoutes(router *gin.Engine, userController *controllers.UserController) {
 	router.POST("/register", userController.RegisterUser)
 	router.POST("/login", userController.Login)
+
+	router.GET("/users", userController.GetUsers)
+	router.GET("/users/:id", infrastructure.IDMiddleware("user"), userController.GetUserByID)
 }
 
 // Protected Routes related to tasks
@@ -32,9 +35,6 @@ func ProtectedTaskRoutes(router *gin.Engine, taskController *controllers.TaskCon
 // Protected Routes related to users
 func ProtectedUserRoutes(router *gin.Engine, userController *controllers.UserController) {
 	router.POST("/users", userController.AddUser)
-	router.GET("/users", userController.GetUsers)
-
-	router.GET("/users/:id", infrastructure.IDMiddleware("user"), userController.GetUserByID)
 	router.PATCH("/users/:id", infrastructure.IDMiddleware("user"), userController.UpdateUserPatch)
 	router.DELETE("/users/:id", infrastructure.IDMiddleware("user"), userController.DeleteUser)
 }

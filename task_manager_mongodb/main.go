@@ -13,6 +13,7 @@ import (
 )
 
 func main() {
+
 	client, err := database.Init()
 	if err != nil {
 		log.Fatal(err)

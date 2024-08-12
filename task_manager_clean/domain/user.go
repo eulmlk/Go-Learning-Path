@@ -1,7 +1,6 @@
 package domain
 
 import (
-	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -35,14 +34,4 @@ type UpdateUserData struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 	Role     string `json:"role"`
-}
-
-// UserRepository defines the interface for user repository operations.
-type UserRepository interface {
-	AddUser(user *User) error
-	GetUsers() ([]User, error)
-	GetUserByID(objectID primitive.ObjectID) (*User, error)
-	GetUserByUsername(username string) (*User, error)
-	UpdateUser(objectID primitive.ObjectID, userData bson.M) error
-	DeleteUser(objectID primitive.ObjectID) error
 }
