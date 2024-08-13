@@ -1,68 +1,55 @@
-# Console-Based Library Management System
+# Develop a Task Management REST API using Go and Gin Framework
 ## Objective
-  - Create a simple console-based library management system in Go to demonstrate the use of structs, interfaces, and other Go functionalities such as methods, slices, and maps.
+  - The objective of this task is to create a simple Task Management REST API using Go programming language and Gin Framework. This API will support basic CRUD operations for managing tasks.
 
 ## Requirements
-  - **Structs**:
-    - Define a Book struct with the following fields:
-      - ID (int)
-      - Title (string)
-      - Author (string)
-      - Status (string) // can be "Available" or "Borrowed"
-    - Define a Member struct with the following fields:
-      - ID (int)
-      - Name (string)
-      - BorrowedBooks ([]Book) // a slice to hold borrowed books
-  - **Interfaces**:
-    - Define a LibraryManager interface with the following methods:
-      - AddBook(book Book)
-      - RemoveBook(bookID int)
-      - BorrowBook(bookID int, memberID int) error
-      - ReturnBook(bookID int, memberID int) error
-      - ListAvailableBooks() []Book
-      - ListBorrowedBooks(memberID int) []Book
+  - Implement a REST API with the following endpoints:
+    - GET /tasks: Get a list of all tasks.
+    - GET /tasks/:id: Get the details of a specific task.
+    - PUT /tasks/:id: Fully update a specific task. This endpoint should accept a JSON body with the new details of the task.
+    - PATCH /tasks/:id: Partially update a specific task. This endpoint should accept a JSON body with which fields should be updated.
+    - DELETE /tasks/:id: Delete a specific task.
+    - POST /tasks: Create a new task. This endpoint should accept a JSON body with the task's title, description, due date, and status.
+  - Use an in-memory database to store tasks. Database integration with persistent storage will be covered in later lessons, so for this task, focus on implementing data storage in memory.
+  - Ensure proper error handling and response codes for different scenarios such as successful operations, invalid requests, and resources not found.
+  - Provide clear and concise documentation for each endpoint using postman, including expected request payloads and response formats.
+  - Use Postman to test each endpoint of the Task Management API.
 
-## Implementation
-Implement the LibraryManager interface in a Library struct. The Library struct should have a field to store all books (use a map with book ID as the key) and a field to store members (use a map with member ID as the key).
-
-## Methods
-  - Implement the methods defined in the LibraryManager interface:
-    - AddBook: Adds a new book to the library.
-    - RemoveBook: Removes a book from the library by its ID.
-    - BorrowBook: Allows a member to borrow a book if it is available.
-    - ReturnBook: Allows a member to return a borrowed book.
-    - ListAvailableBooks: Lists all available books in the library.
-    - ListBorrowedBooks: Lists all books borrowed by a specific member.
-
-## Console Interaction
-  - Create a simple console interface to interact with the library management system. Implement functions to:
-    - Add a new book.
-    - Remove an existing book.
-    - Borrow a book.
-    - Return a book.
-    - List all available books.
-    - List all borrowed books by a member.
+## Instructions
+  - Use Go programming language and Gin Framework to develop the API.
+  - Implement the specified endpoints adhering to the defined requirements.
+  - Utilize an in-memory database to store task data.
+  - Test the API endpoints using appropriate tools (e.g., Postman, curl).
+  - Write clean, well-structured, and maintainable code with proper comments.
+  - Ensure the code is properly formatted and follows best practices for Go development.
+  - Document the API endpoints with details on request and response formats.
+  - Submit your code along with any necessary instructions for running and testing the API.
 
 ## Folder Structure
-  - Follow the following folder structure for this task:
-  ```
-    library_management/
+  - Follow the following folder structure for this task
+    ```
+    task_manager/
     ├── main.go
     ├── controllers/
-    │   └── library_controller.go
+    │   └── task_controller.go
     ├── models/
-    │   └── book.go
-    │   └── member.go
-    ├── services/
-    │   └── library_service.go
+    │   └── task.go
+    ├── data/
+    │   └── task_service.go
+    ├── router/
+    │   └── router.go
     ├── docs/
-    │   └── documentation.md
+    │   └── api_documentation.md
     └── go.mod
-  ```
-  - **main.go**: Entry point of the application.
-  - **controllers/library_controller.go**: Handles console input and invokes the appropriate service methods.
-  - **models/book.go**: Defines the Book struct.
-  - **models/member.go**: Defines the Member struct.
-  - **services/library_service.go**: Contains business logic and data manipulation functions.
-  - **docs/documentation.md**: Contains system documentation and other related information.
-  - **go.mod**: Defines the module and its dependencies.
+    ```
+    - **main.go**: Entry point of the application.
+    - **controllers/task_controller.go**: Handles incoming HTTP requests and invokes the appropriate service methods.
+    - **models/**: Defines the data structures used in the application.
+    - **data/task_service.go**: Contains business logic and data manipulation functions.
+    - **router/router.go**: Sets up the routes and initializes the Gin router and Defines the routing configuration for the API.
+    - **docs/api_documentation.md**: Contains API documentation and other related documentation.
+  - **Note**:
+    - Remember that this task is focused on backend development skills using Go and Gin Framework.
+    - Avoid unnecessary complexity in the implementation.
+    - Database integration with persistent storage will be addressed in subsequent lessons; hence, focus on implementing data storage in memory for this task.
+
