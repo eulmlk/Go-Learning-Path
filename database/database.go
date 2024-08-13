@@ -5,7 +5,7 @@ import (
 	"errors"
 	"log"
 	"os"
-	"task_manager/models"
+	"task_manager/domain"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -13,6 +13,11 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+const (
+	DatabaseName = "task_manager"
+)
+
+// A function that initializes the MongoDB connection.
 func Init() (*mongo.Client, error) {
 	// Get mongo connection uri
 	uri, ok := os.LookupEnv("MONGODB_URI")
@@ -39,6 +44,7 @@ func Init() (*mongo.Client, error) {
 	return client, nil
 }
 
+// A function that creates the root user if it doesn't exist.
 func CreateRootUser(client *mongo.Client) error {
 	// Get the root username and password
 	rootUsername, ok := os.LookupEnv("ROOT_USERNAME")
@@ -52,7 +58,7 @@ func CreateRootUser(client *mongo.Client) error {
 	}
 
 	// Get the user collection
-	collection := client.Database("task_manager").Collection("users")
+	collection := client.Database(DatabaseName).Collection(domain.UserCollection)
 
 	// Check if the root user exists
 	var user map[string]interface{}
@@ -62,7 +68,7 @@ func CreateRootUser(client *mongo.Client) error {
 	}
 
 	// Create the root user
-	rootUser := models.User{
+	rootUser := domain.User{
 		ID:       primitive.NewObjectID(),
 		Username: rootUsername,
 		Password: rootPassword,

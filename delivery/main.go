@@ -4,11 +4,10 @@ import (
 	"context"
 	"log"
 	"net/http"
-	"os"
 	"os/signal"
 	"syscall"
 	"task_manager/database"
-	"task_manager/router"
+	"task_manager/delivery/router"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -49,23 +48,25 @@ func main() {
 	log.Println("Server is running on port 8080")
 
 	// Graceful shutdown
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	<-ctx.Done()
 	log.Println("Shutting down server...")
 
-	// Close database connection
-	err = client.Disconnect(context.Background())
-	if err != nil {
-		log.Fatal(err)
-	}
-	log.Println("Database connection closed")
-
-	// Create a deadline to wait for
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	// Create a context with a timeout for the graceful shutdown
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	if err := server.Shutdown(ctx); err != nil {
-		log.Fatal("Server forced to shutdown:", err)
+
+	// Close database connection
+	if err := client.Disconnect(context.Background()); err != nil {
+		log.Println("Error closing database connection:", err)
+	} else {
+		log.Println("Database connection closed")
+	}
+
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		log.Fatalf("Server forced to shutdown: %s", err)
 	}
 
 	log.Println("Server exiting")
