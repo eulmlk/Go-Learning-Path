@@ -62,6 +62,6 @@ To set up and run this Gin Go REST API, follow these steps:
 
 # API Documentation
 
-For more details about the API endpoints and how to use them, please refer to the [API documentation](https://documenter.getpostman.com/view/33183582/2sA3kdBdZs).
+For more details about the API endpoints and how to use them, please refer to the [API documentation](https://documenter.getpostman.com/view/33183582/2sA3rxpsfh).
 
 To test the API using Postman, you will need to have Postman installed. You can import the Postman collection by clicking the "Run in Postman" button on the documentation page.
