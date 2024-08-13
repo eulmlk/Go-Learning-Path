@@ -2,17 +2,6 @@
 ## Objective
   - The objective of this task is to enhance the Task Management API by adding authentication and authorization mechanisms using JSON Web Tokens (JWT). This enhancement will introduce the concept of users, login functionality, and protected routes to restrict access to certain endpoints based on user roles.
 
-## Requirements
-  - Implement user management functionality to support creating user accounts with unique usernames and passwords.
-  - Introduce JWT-based authentication to validate user credentials and generate access tokens upon successful login.
-  - Secure the API endpoints by implementing middleware to validate JWT tokens for authentication.
-  - Define user roles (e.g., admin, regular user) and restrict access to certain endpoints based on user roles.
-  - Implement login functionality to authenticate users and generate JWT tokens for subsequent API requests.
-  - Ensure that only authenticated users with valid JWT tokens can access protected routes.
-  - Update the API documentation to include instructions for user registration, login, and usage of protected endpoints.
-  - Test the API endpoints with and without authentication to verify proper enforcement of access control rules.
-  - Verify that user credentials are securely stored and transmitted using appropriate encryption and hashing techniques.
-
 ## Instructions
   - Implement user management endpoints for user registration and login, including:
     - POST /register: Create a new user account with a unique username and password.
