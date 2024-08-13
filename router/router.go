@@ -5,14 +5,15 @@ import (
 	"task_manager/data"
 
 	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 // InitializeRouter initializes the Gin router and sets up the routes
-func InitializeRouter() *gin.Engine {
+func InitializeRouter(client *mongo.Client) *gin.Engine {
 	// Create a new Gin router
 	router := gin.Default()
 
-	taskService := data.NewTaskService()
+	taskService := data.NewTaskService(client.Database("task_manager"))
 	taskController := controllers.NewTaskController(taskService)
 
 	// A route to get all the tasks

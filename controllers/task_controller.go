@@ -1,11 +1,13 @@
 package controllers
 
 import (
+	"log"
 	"task_manager/data"
 	"task_manager/models"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // TaskController is a struct that holds a pointer to the TaskService.
@@ -20,7 +22,12 @@ func NewTaskController(service *data.TaskService) *TaskController {
 
 // GetTasks is a handler function that returns all tasks.
 func (tc *TaskController) GetTasks(ctx *gin.Context) {
-	tasks := tc.service.GetTasks()
+	tasks, err := tc.service.GetTasks()
+	if err != nil {
+		log.Println(err)
+		ctx.JSON(err.StatusCode, gin.H{"error": err.Err.Error()})
+		return
+	}
 
 	ctx.JSON(200, gin.H{
 		"count": len(tasks),
@@ -31,11 +38,10 @@ func (tc *TaskController) GetTasks(ctx *gin.Context) {
 // GetTaskByID is a handler function that returns a task by ID.
 func (tc *TaskController) GetTaskByID(ctx *gin.Context) {
 	taskID := ctx.Param("id")
-	task := tc.service.GetTaskByID(taskID)
-
-	// If the task is not found, return a 404 response.
-	if task == nil {
-		ctx.JSON(404, gin.H{"error": "Task not found"})
+	task, err := tc.service.GetTaskByID(taskID)
+	if err != nil {
+		log.Println(err.Err)
+		ctx.JSON(err.StatusCode, gin.H{"error": err.Err.Error()})
 		return
 	}
 
@@ -51,12 +57,12 @@ func (tc *TaskController) CreateTask(ctx *gin.Context) {
 
 	// If there is an error binding the request body, return a 400 response.
 	if err != nil {
-		ctx.JSON(400, gin.H{"error": "Invalid request!"})
+		ctx.JSON(400, gin.H{"error": "invalid request!"})
 		return
 	}
 
 	// If the ID field is present in the request body, return a 400 response.
-	if newTask.ID != "" {
+	if newTask.ID != primitive.NilObjectID {
 		ctx.JSON(400, gin.H{"error": "id field is not allowed"})
 		return
 	}
@@ -82,11 +88,15 @@ func (tc *TaskController) CreateTask(ctx *gin.Context) {
 		return
 	}
 
-	// Generate a new ID for the task.
-	newTask.ID = tc.service.GenerateID()
+	newTask.ID = primitive.NewObjectID()
 
 	// Create the task using the TaskService.
-	tc.service.CreateTask(&newTask)
+	_err := tc.service.CreateTask(&newTask)
+	if _err != nil {
+		log.Println(_err.Err)
+		ctx.JSON(_err.StatusCode, gin.H{"error": _err.Err.Error()})
+		return
+	}
 
 	// Return a 201 response with the new task.
 	ctx.JSON(201, newTask)
@@ -100,12 +110,12 @@ func (tc *TaskController) UpdateTaskPut(ctx *gin.Context) {
 
 	// If there is an error binding the request body, return a 400 response.
 	if err != nil {
-		ctx.JSON(400, gin.H{"error": "Invalid request"})
+		ctx.JSON(400, gin.H{"error": "invalid request"})
 		return
 	}
 
 	// If the ID field is present in the request body, return a 400 response.
-	if newTask.ID != "" {
+	if newTask.ID != primitive.NilObjectID {
 		ctx.JSON(400, gin.H{"error": "id field is not allowed"})
 		return
 	}
@@ -136,12 +146,15 @@ func (tc *TaskController) UpdateTaskPut(ctx *gin.Context) {
 
 	// Update the task using the TaskService.
 	taskID := ctx.Param("id")
-	task := tc.service.UpdateTask(taskID, &newTask)
-
-	// If the task is not found, return a 404 response.
-	if task == nil {
-		ctx.JSON(404, gin.H{"error": "Task not found"})
+	task, _err := tc.service.UpdateTask(taskID, &newTask)
+	if _err != nil {
+		log.Println(_err.Err)
+		ctx.JSON(_err.StatusCode, gin.H{"error": _err.Err.Error()})
 		return
+	}
+
+	if task == nil {
+		panic("task not found")
 	}
 
 	// Otherwise, return a 200 response with the updated task.
@@ -156,18 +169,22 @@ func (tc *TaskController) UpdateTaskPatch(ctx *gin.Context) {
 
 	// If there is an error binding the request body, return a 400 response.
 	if err != nil {
-		ctx.JSON(400, gin.H{"error": "Invalid request"})
+		ctx.JSON(400, gin.H{"error": "invalid request"})
 		return
 	}
 
 	// Update the task using the TaskService.
 	taskID := ctx.Param("id")
-	task := tc.service.UpdateTask(taskID, &newTask)
+	task, _err := tc.service.UpdateTask(taskID, &newTask)
+	if _err != nil {
+		log.Println(_err.Err)
+		ctx.JSON(_err.StatusCode, gin.H{"error": _err.Err.Error()})
+		return
+	}
 
 	// If the task is not found, return a 404 response.
 	if task == nil {
-		ctx.JSON(404, gin.H{"error": "Task not found"})
-		return
+		panic("task not found")
 	}
 
 	// Otherwise, return a 200 response with the updated task.
@@ -182,7 +199,7 @@ func (tc *TaskController) DeleteTask(ctx *gin.Context) {
 
 	// If the task is not found, return a 404 response.
 	if err != nil {
-		ctx.JSON(404, gin.H{"error": "Task not found"})
+		ctx.JSON(err.StatusCode, gin.H{"error": err.Err.Error()})
 		return
 	}
 

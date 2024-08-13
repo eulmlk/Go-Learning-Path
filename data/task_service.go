@@ -1,116 +1,128 @@
 package data
 
 import (
+	"context"
 	"errors"
-	"math/rand"
 	"task_manager/models"
+
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 // TaskService is a struct that holds a map of tasks.
 type TaskService struct {
-	tasks map[string]*models.Task
+	collection *mongo.Collection
 }
 
 // NewTaskService creates a new instance of TaskService.
 // It initializes the tasks map and returns a pointer to the TaskService.
-func NewTaskService() *TaskService {
-	return &TaskService{tasks: make(map[string]*models.Task)}
+func NewTaskService(db *mongo.Database) *TaskService {
+	return &TaskService{
+		collection: db.Collection("tasks"),
+	}
 }
 
 // GetTasks returns a slice of all tasks.
-func (ts *TaskService) GetTasks() []models.Task {
+func (ts *TaskService) GetTasks() ([]models.Task, *models.Error) {
 	tasks := []models.Task{}
 
-	// Loop through the tasks map and append each task to the tasks slice.
-	for _, task := range ts.tasks {
-		tasks = append(tasks, *task)
+	// Query the database for all tasks.
+	cursor, err := ts.collection.Find(context.Background(), bson.M{})
+	if err != nil {
+		return nil, &models.Error{Err: err, StatusCode: 500}
 	}
 
-	return tasks
+	// Iterate over the cursor and decode each task into a Task struct.
+	for cursor.Next(context.Background()) {
+		var task models.Task
+
+		err := cursor.Decode(&task)
+		if err != nil {
+			return nil, &models.Error{Err: err, StatusCode: 500}
+		}
+
+		tasks = append(tasks, task)
+	}
+
+	return tasks, nil
 }
 
 // GetTaskByID returns the task with the given ID.
-func (ts *TaskService) GetTaskByID(id string) *models.Task {
-	// Check if the task with the given ID exists in the tasks map.
-	// If it exists, return the task, otherwise return nil.
-	if task, ok := ts.tasks[id]; ok {
-		return task
+func (ts *TaskService) GetTaskByID(id string) (*models.Task, *models.Error) {
+	task := &models.Task{}
+
+	objectID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return nil, &models.Error{Err: errors.New("invalid id"), StatusCode: 400}
+	}
+
+	result := ts.collection.FindOne(context.Background(), bson.M{"_id": objectID})
+	if result.Err() == mongo.ErrNoDocuments {
+		return nil, &models.Error{Err: errors.New("task not found"), StatusCode: 404}
+	}
+
+	err = result.Decode(task)
+	if err != nil {
+		return nil, &models.Error{Err: err, StatusCode: 500}
+	}
+
+	return task, nil
+}
+
+// CreateTask creates a new task and adds it to the tasks map.
+func (ts *TaskService) CreateTask(task *models.Task) *models.Error {
+	_, err := ts.collection.InsertOne(context.Background(), task)
+	if err != nil {
+		return &models.Error{Err: err, StatusCode: 500}
 	}
 
 	return nil
 }
 
-// CreateTask creates a new task and adds it to the tasks map.
-func (ts *TaskService) CreateTask(task *models.Task) {
-	ts.tasks[task.ID] = task
-}
-
-// randomString generates a random string of the given length.
-func (ts *TaskService) randomString(length int) string {
-	var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890")
-	b := make([]rune, length)
-
-	// Generate a random string of the given length using the letterRunes slice.
-	for i := range b {
-		b[i] = letterRunes[rand.Intn(len(letterRunes))]
-	}
-
-	return string(b)
-}
-
-// GenerateID generates a random ID for a new task.
-func (ts *TaskService) GenerateID() string {
-	var id string
-
-	// Generate a random ID and check if it already exists in the tasks map.
-	// If it exists, generate a new ID until a unique one is found.
-	for {
-		id = ts.randomString(30)
-		if ts.GetTaskByID(id) == nil {
-			break
-		}
-	}
-
-	return id
-}
-
 // UpdateTask updates the task with the given ID using the provided task data.
-func (ts *TaskService) UpdateTask(id string, taskData *models.Task) *models.Task {
-	_, ok := ts.tasks[id]
-	if !ok {
-		return nil
+func (ts *TaskService) UpdateTask(id string, taskData *models.Task) (*models.Task, *models.Error) {
+	objectID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return nil, &models.Error{Err: errors.New("invalid id"), StatusCode: 400}
 	}
 
-	// Update the task fields with the provided task data.
-	// If a field is not provided, the existing value is retained.
-	if taskData.Title != "" {
-		ts.tasks[id].Title = taskData.Title
+	// Update the task in the collection.
+	result, err := ts.collection.UpdateOne(context.Background(), bson.M{"_id": objectID}, bson.M{"$set": bson.M{
+		"title":       taskData.Title,
+		"description": taskData.Description,
+		"due_date":    taskData.DueDate,
+		"status":      taskData.Status,
+	}})
+
+	if err != nil {
+		return nil, &models.Error{Err: err, StatusCode: 500}
 	}
 
-	if taskData.Description != "" {
-		ts.tasks[id].Description = taskData.Description
+	if result.MatchedCount == 0 {
+		return nil, &models.Error{Err: errors.New("task not found"), StatusCode: 404}
 	}
 
-	if !taskData.DueDate.IsZero() {
-		ts.tasks[id].DueDate = taskData.DueDate
-	}
-
-	if taskData.Status != "" {
-		ts.tasks[id].Status = taskData.Status
-	}
-
-	return ts.tasks[id]
+	taskData.ID = objectID
+	return taskData, nil
 }
 
 // DeleteTask deletes the task with the given ID.
-func (ts *TaskService) DeleteTask(id string) error {
-	// Check if the task with the given ID exists in the tasks map.
-	// If it exists, delete the task, otherwise return an error.
-
-	if _, ok := ts.tasks[id]; ok {
-		delete(ts.tasks, id)
-		return nil
+func (ts *TaskService) DeleteTask(id string) *models.Error {
+	objectID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return &models.Error{Err: errors.New("invalid id"), StatusCode: 400}
 	}
 
-	return errors.New("task not found")
+	// Delete the task from the collection.
+	result, err := ts.collection.DeleteOne(context.Background(), bson.M{"_id": objectID})
+	if err != nil {
+		return &models.Error{Err: err, StatusCode: 500}
+	}
+
+	if result.DeletedCount == 0 {
+		return &models.Error{Err: errors.New("task not found"), StatusCode: 404}
+	}
+
+	return nil
 }
