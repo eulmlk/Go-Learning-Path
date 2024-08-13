@@ -49,7 +49,6 @@
     - **router/router.go**: Sets up the routes and initializes the Gin router and Defines the routing configuration for the API.
     - **docs/api_documentation.md**: Contains API documentation and other related documentation.
   - **Note**:
-    - Remember that this task is focused on backend development skills using Go and Gin Framework.
-    - Avoid unnecessary complexity in the implementation.
+    - Remember that this task is focused on backend development skills using Go and Gin Framework. Avoid unnecessary complexity in the implementation.
     - Database integration with persistent storage will be addressed in subsequent lessons; hence, focus on implementing data storage in memory for this task.
 
