@@ -2,16 +2,6 @@
 ## Objective
   - The objective of this task is to refactor the existing Task Management API codebase using Clean Architecture principles. This refactor aims to improve the maintainability, testability, and scalability of the application by organizing the code into distinct layers with clear separation of concerns.
 
-## Requirements
-  - Analyze the existing Task Management API codebase and identify areas for improvement based on Clean Architecture principles.
-  - Refactor the codebase into separate layers representing different architectural components, such as domain, use cases, and infrastructure.
-  - Define clear boundaries between layers to enforce dependencies from higher-level layers to lower-level layers.
-  - Implement domain models representing core business entities and logic, ensuring they remain independent of external frameworks or libraries.
-  - Define use cases as the central component of the application, encapsulating the application's business logic and orchestrating interactions between different layers.
-  - Implement interfaces to abstract external dependencies, such as data access mechanisms, allowing for easy substitution and testing.
-  - Organize the codebase into distinct packages or modules representing different architectural layers (e.g., domain, usecase, repository, delivery).
-  - Update the API endpoints to interact with the use cases layer, ensuring that business logic is centralized and reusable.
-
 ## Instructions
   - Conduct a thorough review of the existing Task Management API codebase to understand its structure and functionality.
   - Identify areas where the codebase could benefit from restructuring based on Clean Architecture principles, such as separation of concerns and dependency inversion.
