@@ -4,80 +4,140 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"strconv"
+	"os/exec"
+	"runtime"
 	"strings"
 )
 
 func main() {
-	fancyPrint("Welcome to Student Grade Calculator")
+	mainMenu()
+}
 
-	name := readString("Please enter your name: ", "Please enter a valid name!")
-	fmt.Printf("Hello, %s! ", name)
-	subjectCount := readSubjectCount()
+func clearScreen() {
+	if runtime.GOOS == "windows" {
+		cmd := exec.Command("cmd", "/c", "cls")
+		cmd.Stdout = os.Stdout
+		cmd.Run()
+	} else {
+		cmd := exec.Command("clear")
+		cmd.Stdout = os.Stdout
+		cmd.Run()
+	}
+}
 
-	var subjectNames []string
-	var grades []float64
-	for i := 0; i < subjectCount; i++ {
-		subjectPrompt := fmt.Sprintf("Enter name of subject %d: ", i+1)
-		subjectName := readString(subjectPrompt, "Please enter a valid subject name!")
-		subjectNames = append(subjectNames, subjectName)
+func pause() {
+	fmt.Println("Press Enter to continue...")
+	bufio.NewReader(os.Stdin).ReadBytes('\n')
+}
 
-		grade := readGrade(i + 1)
-		grades = append(grades, grade)
+func mainMenu() {
+	clearScreen()
+	fancyPrint("Welcome to String Processor")
+	fmt.Println("Please select an option:")
+	fmt.Println("  1. Count Word Frequency")
+	fmt.Println("  2. Check Palindrome")
+	fmt.Println("  3. Exit")
+
+	fmt.Print("Enter your choice: ")
+	choice := readLine()
+
+	switch choice {
+	case "1":
+		countWordMenu()
+	case "2":
+		checkPalindromeMenu()
+	case "3":
+		fmt.Println("Exiting program...")
+		os.Exit(0)
+	default:
+		fmt.Println("Invalid choice. Please try again.")
+		pause()
+		mainMenu()
+	}
+}
+
+func countWordMenu() {
+	clearScreen()
+	fancyPrint("Welcome to Word Frequency Counter")
+	fmt.Print("Please enter a string to count word frequency: ")
+
+	str := readLine()
+	for word, count := range CountWords(str) {
+		fmt.Printf("Counts of %s: %d\n", word, count)
 	}
 
-	printReport(name, subjectNames, grades)
+	fmt.Print("Do you want to try again? (Y/N): ")
+	choice := readLine()
+	if strings.ToLower(choice) == "y" {
+		countWordMenu()
+	} else {
+		mainMenu()
+	}
+}
+
+func CountWords(str string) map[string]int {
+	str = strings.Map(func(r rune) rune {
+		if r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r == ' ' {
+			return r
+		}
+		return -1
+	}, str)
+	words := strings.Fields(str)
+
+	counts := make(map[string]int)
+	for _, word := range words {
+		counts[strings.ToLower(word)]++
+	}
+
+	return counts
+}
+
+func checkPalindromeMenu() {
+	clearScreen()
+	fancyPrint("Welcome to Palindrome Checker")
+	fmt.Print("Please enter a string to check palindrome: ")
+
+	str := readLine()
+	if IsPalindrome(str) {
+		fmt.Println("The string is a palindrome.")
+	} else {
+		fmt.Println("The string is not a palindrome.")
+	}
+
+	fmt.Print("Do you want to try again? (Y/N): ")
+	choice := readLine()
+	if strings.ToLower(choice) == "y" {
+		checkPalindromeMenu()
+	} else {
+		mainMenu()
+	}
+}
+
+func IsPalindrome(str string) bool {
+	str = strings.Map(func(r rune) rune {
+		if r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' {
+			return r
+		}
+		return -1
+	}, str)
+
+	str = strings.ToLower(str)
+	left, right := 0, len(str)-1
+
+	for left < right {
+		if str[left] != str[right] {
+			return false
+		}
+
+		left++
+		right--
+	}
+
+	return true
 }
 
 const cellLen = 20
 const fullLen = (cellLen * 3) + 4
-
-func readString(prompt string, errorPrompt string) string {
-	fmt.Print(prompt)
-	str := readLine()
-
-	_, err := strconv.ParseFloat(str, 64)
-	for err == nil || str == "" {
-		fmt.Println(errorPrompt)
-		fmt.Print(prompt)
-		str = readLine()
-		_, err = strconv.ParseFloat(str, 64)
-	}
-
-	return str
-}
-
-func readSubjectCount() int {
-	prompt := "Please enter how many subjects you took: "
-	fmt.Print(prompt)
-	str := readLine()
-
-	count, err := strconv.Atoi(str)
-	for err != nil || count <= 0 {
-		fmt.Println("Please enter a valid number of subjects.")
-		fmt.Print(prompt)
-		str = readLine()
-		count, err = strconv.Atoi(str)
-	}
-
-	return count
-}
-
-func readGrade(index int) float64 {
-	prompt := fmt.Sprintf("Enter grade for subject %d (should be between 0 and 100): ", index)
-	fmt.Print(prompt)
-	str := readLine()
-
-	grade, err := strconv.ParseFloat(str, 64)
-	for err != nil || grade < 0 || grade > 100 {
-		fmt.Println("Please enter a valid grade between 0 and 100.")
-		fmt.Print(prompt)
-		str = readLine()
-		grade, err = strconv.ParseFloat(str, 64)
-	}
-
-	return grade
-}
 
 func fancyPrint(str string) {
 	var leftPadding = (fullLen - len(str)) / 2
@@ -94,60 +154,6 @@ func readLine() string {
 	str, _ = reader.ReadString('\n')
 
 	return strings.TrimSpace(str)
-}
-
-func calculateAverage(grades []float64) float64 {
-	var total float64
-	for i := 0; i < len(grades); i++ {
-		total += grades[i]
-	}
-
-	return total / float64(len(grades))
-}
-
-func printReport(studentName string, subjectNames []string, grades []float64) {
-	average := calculateAverage(grades)
-
-	fancyPrint("Student Grade Report")
-	fmt.Println("\n    Student Name:", studentName, "\n")
-
-	printTable(subjectNames, grades)
-
-	fmt.Printf("\n    Average Grade: %.2f\n\n", average)
-}
-
-func printTable(subjectNames []string, grades []float64) {
-	subjectCount := len(subjectNames)
-
-	printChar("-", (cellLen)*3+4, true)
-	printRow([]string{"ID", "Subject Name", "Grade"})
-	printChar("-", (cellLen)*3+4, true)
-	for i := 0; i < subjectCount; i++ {
-		rowData := []string{
-			fmt.Sprintf("%d", i+1),
-			subjectNames[i],
-			fmt.Sprintf("%.2f", grades[i]),
-		}
-
-		printRow(rowData)
-	}
-	printChar("-", (cellLen)*3+4, true)
-}
-
-func printRow(rowData []string) {
-	fmt.Print("|")
-
-	for i := 0; i < len(rowData); i++ {
-		leftPadding := (cellLen - len(rowData[i])) / 2
-		rightPadding := cellLen - len(rowData[i]) - leftPadding
-
-		printChar(" ", leftPadding, false)
-		fmt.Print(rowData[i])
-		printChar(" ", rightPadding, false)
-		fmt.Print("|")
-	}
-
-	fmt.Println()
 }
 
 func printChar(ch string, count int, newLine bool) {
